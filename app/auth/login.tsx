@@ -258,6 +258,10 @@ export default function LoginScreen() {
                   />
                 ) : null}
 
+                <Text style={styles.notice}>
+                  Depois de criar uma conta, confirme o cadastro pelo link enviado ao seu email antes de tentar entrar.
+                </Text>
+
                 <View style={styles.linksRow}>
                   <Link href="/auth/forgot-password" style={styles.linkText}>
                     Esqueci minha senha
@@ -456,5 +460,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#6B7280',
     fontSize: 14,
+  },
+  notice: {
+    marginTop: 8,
+    fontSize: 13,
+    color: '#4B5563',
+    textAlign: 'center',
   },
 });

@@ -103,6 +103,10 @@ export default function SignUpScreen() {
                 Crie um perfil para salvar seu progresso nos estudos e continue aprendendo de graça!
               </Text>
 
+              <Text style={styles.notice}>
+                Após criar a conta, confirme o cadastro no link enviado para o seu email para conseguir fazer login.
+              </Text>
+
               <View style={styles.inputContainer}>
                 <Input 
                   label="Nome" 
@@ -251,6 +255,13 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     lineHeight: 24,
     paddingHorizontal: 20,
+  },
+  notice: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.85)',
+    textAlign: 'center',
+    marginBottom: 28,
+    paddingHorizontal: 24,
   },
   inputContainer: {
     width: '100%',
