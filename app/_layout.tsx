@@ -30,19 +30,16 @@ export default function RootLayout() {
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }}>
         {!user ? (
-      <>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="auth" />
-      </>
-    ) : (
-      <>
-        <Stack.Screen name="home" />
-        <Stack.Screen name="(tabs)" />
-      </>
-    )}
-  </Stack>
-</>
+          <>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="auth" />
+          </>
+        ) : (
+          <Stack.Screen name="(tabs)" />
+        )}
+      </Stack>
+    </>
   );
 }
 

@@ -46,7 +46,7 @@ export default function AuthCallbackScreen() {
           Alert.alert('Redefinicao de senha', 'Link validado. Atualize sua senha.');
           router.replace('/auth/reset-password');
         } else {
-          router.replace('/home');
+          router.replace('/(tabs)');
         }
       } catch (error: any) {
         console.error('Supabase auth callback error', error);

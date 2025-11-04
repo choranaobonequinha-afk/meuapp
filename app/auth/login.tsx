@@ -1,20 +1,37 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, useRouter } from 'expo-router';
 import { makeRedirectUri } from 'expo-auth-session';
 import Constants from 'expo-constants';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
+import { useThemeColors } from '../../store/themeStore';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
+  const theme = useThemeColors();
   const { signIn, resendConfirmationEmail } = useAuthStore.getState();
+
   const redirectTo = useMemo(() => makeRedirectUri({ scheme: 'meuapp', path: 'auth/callback' }), []);
   const googleConfigured = useMemo(() => {
     const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, unknown>;
@@ -31,20 +48,16 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [magicLoading, setMagicLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [showResendButton, setShowResendButton] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const validateEmail = (value: string) => {
-    if (!value.trim()) {
-      return 'Informe seu email';
-    }
-    if (!EMAIL_REGEX.test(value.trim())) {
-      return 'Email invalido';
-    }
+    if (!value.trim()) return 'Informe seu email';
+    if (!EMAIL_REGEX.test(value.trim())) return 'Email invalido';
     return undefined;
   };
 
-  const handleSignInWithPassword = async () => {
+  const handlePasswordSignIn = async () => {
     const emailError = validateEmail(email);
     const passwordError = password ? undefined : 'Informe sua senha';
 
@@ -57,7 +70,7 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       await signIn(email.trim(), password);
-      router.replace('/home');
+      router.replace('/(tabs)');
     } catch (error: any) {
       if (error?.message?.includes('Email not confirmed')) {
         setShowResendButton(true);
@@ -122,141 +135,325 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={styles.title}>Acessar conta</Text>
-        <Text style={styles.subtitle}>
-          Use seu email para receber um link magico ou autentique com senha.
-        </Text>
-
-        <View style={styles.form}>
-          <Input
-            label="Email"
-            value={email}
-            onChangeText={(value) => {
-              setEmail(value);
-              if (errors.email) {
-                setErrors((prev) => ({ ...prev, email: undefined }));
-              }
-            }}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            placeholder="voce@email.com"
-            error={errors.email}
-            style={styles.input}
+      <LinearGradient colors={theme.gradient} style={styles.gradient}>
+        <View pointerEvents="none" style={styles.decorations}>
+          <LinearGradient
+            colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.05)']}
+            style={[styles.blob, styles.blobTopLeft]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           />
-
-          <Input
-            label="Senha"
-            value={password}
-            onChangeText={(value) => {
-              setPassword(value);
-              if (errors.password) {
-                setErrors((prev) => ({ ...prev, password: undefined }));
-              }
-            }}
-            placeholder="********"
-            secureTextEntry
-            error={errors.password}
-            style={styles.input}
+          <LinearGradient
+            colors={['rgba(14,165,233,0.35)', 'transparent']}
+            style={[styles.blob, styles.blobCenter]}
+            start={{ x: 0.2, y: 0 }}
+            end={{ x: 1, y: 1 }}
           />
-
-          <Button
-            title="Entrar com senha"
-            onPress={handleSignInWithPassword}
-            loading={loading}
-            style={styles.button}
+          <LinearGradient
+            colors={['rgba(139,92,246,0.45)', 'rgba(59,130,246,0.1)']}
+            style={[styles.blob, styles.blobBottomRight]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0.8, y: 1 }}
           />
-
-          <Button
-            title="Enviar magic link"
-            onPress={handleMagicLink}
-            loading={magicLoading}
-            variant="ghost"
-            style={styles.button}
-          />
-
-          {showResendButton && (
-            <Button
-              title="Reenviar email de confirmacao"
-              onPress={handleResendConfirmation}
-              variant="ghost"
-              style={styles.button}
-            />
-          )}
         </View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.flex}
+        >
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 48 }]}
+          >
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              <View style={styles.headerTextBlock}>
+                <Text style={styles.appName}>MeuApp</Text>
+                <Text style={styles.headerSubtitle}>Bem-vindo de volta!</Text>
+              </View>
+            </View>
 
-        <View style={styles.linksRow}>
-          <Link href="/auth/forgot-password" style={styles.linkText}>
-            Esqueci minha senha
-          </Link>
-          <Text style={styles.separator}>|</Text>
-          <Link href="/auth/signup" style={styles.linkText}>
-            Criar conta
-          </Link>
-        </View>
+            <View style={styles.heroWrapper}>
+              <View style={styles.heroCircle}>
+                <Image
+                  source={require('../../assets/images/hero-logo.png')}
+                  style={styles.heroImage}
+                />
+              </View>
+              <Text style={styles.heroTitle}>Estude no seu ritmo</Text>
+              <Text style={styles.heroDescription}>
+                Acesse aulas, trilhas e desafios em poucos segundos.
+              </Text>
+            </View>
+            <LinearGradient
+              colors={['rgba(255,255,255,0.45)', 'rgba(255,255,255,0.05)']}
+              style={styles.cardOuter}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <BlurView intensity={45} tint="light" style={styles.card}>
+                <View style={styles.badgeRow}>
+                  <View style={[styles.badge, styles.badgePrimary]}>
+                    <Ionicons name="key-outline" size={16} color="#2563EB" />
+                    <Text style={styles.badgeText}>Magic link</Text>
+                  </View>
+                  <View style={[styles.badge, styles.badgeSecondary]}>
+                    <Ionicons name="shield-checkmark-outline" size={16} color="#0EA5E9" />
+                    <Text style={styles.badgeText}>Login seguro</Text>
+                  </View>
+                </View>
 
-        {googleConfigured ? (
-          <View style={styles.oauthSection}>
-            <Text style={styles.oauthTitle}>Ou continue com</Text>
-            <Button
-              title="Google"
-              onPress={handleGoogleOAuth}
-              loading={oauthLoading}
-              variant="ghost"
-              style={styles.button}
-            />
-          </View>
-        ) : null}
-      </View>
+                <Input
+                  label="Email"
+                  value={email}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  placeholder="voce@email.com"
+                  onChangeText={(value) => {
+                    setEmail(value);
+                    if (errors.email) {
+                      setErrors((prev) => ({ ...prev, email: undefined }));
+                    }
+                  }}
+                  error={errors.email}
+                  style={styles.inputSpacing}
+                />
+
+                <Input
+                  label="Senha"
+                  value={password}
+                  placeholder="********"
+                  secureTextEntry
+                  onChangeText={(value) => {
+                    setPassword(value);
+                    if (errors.password) {
+                      setErrors((prev) => ({ ...prev, password: undefined }));
+                    }
+                  }}
+                  error={errors.password}
+                  style={styles.inputSpacing}
+                />
+
+                <Button
+                  title="Entrar com senha"
+                  onPress={handlePasswordSignIn}
+                  loading={loading}
+                />
+
+                <Button
+                  title="Enviar magic link"
+                  onPress={handleMagicLink}
+                  loading={magicLoading}
+                  variant="ghost"
+                  style={styles.secondaryButton}
+                />
+
+                {showResendButton ? (
+                  <Button
+                    title="Reenviar email de confirmacao"
+                    onPress={handleResendConfirmation}
+                    variant="ghost"
+                    style={styles.secondaryButton}
+                  />
+                ) : null}
+
+                <View style={styles.linksRow}>
+                  <Link href="/auth/forgot-password" style={styles.linkText}>
+                    Esqueci minha senha
+                  </Link>
+                  <Text style={styles.dot}>•</Text>
+                  <Link href="/auth/signup" style={styles.linkText}>
+                    Criar conta
+                  </Link>
+                </View>
+
+                {googleConfigured ? (
+                  <View style={styles.oauthBlock}>
+                    <Text style={styles.oauthLabel}>Ou continue com</Text>
+                    <Button
+                      title="Google"
+                      onPress={handleGoogleOAuth}
+                      loading={oauthLoading}
+                      variant="ghost"
+                    />
+                  </View>
+                ) : null}
+              </BlurView>
+            </LinearGradient>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1E40AF',
   },
-  container: {
+  gradient: {
     flex: 1,
+  },
+  scroll: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingTop: 24,
     gap: 24,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
+  decorations: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#4B5563',
+  blob: {
+    position: 'absolute',
+    borderRadius: 240,
+    transform: [{ rotate: '12deg' }],
   },
-  form: {
-    gap: 16,
+  blobTopLeft: {
+    width: 260,
+    height: 260,
+    top: -120,
+    left: -80,
   },
-  input: {
-    marginBottom: 4,
+  blobCenter: {
+    width: 220,
+    height: 220,
+    top: 160,
+    right: -60,
   },
-  button: {
-    width: '100%',
+  blobBottomRight: {
+    width: 280,
+    height: 280,
+    bottom: -140,
+    left: 40,
   },
-  linksRow: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 16,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTextBlock: {
+    flex: 1,
+  },
+  appName: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  headerSubtitle: {
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 4,
+  },
+  heroWrapper: {
+    alignItems: 'center',
+    gap: 16,
+  },
+  heroCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0A4AA3',
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
+  },
+  heroImage: {
+    width: 82,
+    height: 82,
+    resizeMode: 'contain',
+  },
+  heroTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  heroDescription: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 15,
+    textAlign: 'center',
+    paddingHorizontal: 24,
+  },
+  cardOuter: {
+    borderRadius: 28,
+    padding: 1,
+  },
+  card: {
+    borderRadius: 27,
+    padding: 24,
+    gap: 20,
+    backgroundColor: 'rgba(255,255,255,0.75)',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+  },
+  badgePrimary: {
+    backgroundColor: 'rgba(59,130,246,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(59,130,246,0.35)',
+  },
+  badgeSecondary: {
+    backgroundColor: 'rgba(14,165,233,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(14,165,233,0.35)',
+  },
+  badgeText: {
+    fontSize: 13,
+    color: '#1E293B',
+  },
+  inputSpacing: {
+    marginBottom: 12,
+  },
+  secondaryButton: {
+    marginTop: -4,
+  },
+  linksRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
   },
   linkText: {
     color: '#2563EB',
     fontWeight: '600',
   },
-  separator: {
+  dot: {
     color: '#D1D5DB',
   },
-  oauthSection: {
+  oauthBlock: {
+    marginTop: 12,
     gap: 12,
   },
-  oauthTitle: {
+  oauthLabel: {
+    textAlign: 'center',
     color: '#6B7280',
     fontSize: 14,
   },
