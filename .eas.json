@@ -1,0 +1,12 @@
+{
+  "build": {
+    "preview": {
+      "developmentClient": true,
+      "autoIncrement": "version"
+    },
+    "release": {}
+  },
+  "submit": {
+    "production": {}
+  }
+}
