@@ -183,7 +183,7 @@ export default function LoginScreen() {
               </View>
               <Text style={styles.heroTitle}>Estude no seu ritmo</Text>
               <Text style={styles.heroDescription}>
-                Acesse aulas, trilhas e desafios em poucos segundos.
+                Acesse aulas, trilhas e desafios em poucos segundos. Utilize um email válido, pois a confirmação é enviada para sua caixa de entrada.
               </Text>
             </View>
             <LinearGradient
