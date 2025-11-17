@@ -16,11 +16,9 @@ import { Link, useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
-import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeColors } from '../../store/themeStore';
 import { useGoogleSignIn } from '../../hooks/useGoogleSignIn';
@@ -91,7 +89,7 @@ export default function LoginScreen() {
         setShowResendButton(true);
         setFeedback({
           type: 'info',
-          message: 'Enviamos um email de confirmação quando você criou a conta. Verifique sua caixa de entrada (e spam).',
+          message: 'Enviamos um email de confirmacao quando voce criou a conta. Verifique sua caixa de entrada (e spam).',
         });
         Alert.alert('Email nao confirmado', 'Confirme o endereco de email antes de fazer login.');
       } else {
@@ -110,13 +108,13 @@ export default function LoginScreen() {
       Alert.alert('Email reenviado', 'Confira sua caixa de entrada.');
       setFeedback({
         type: 'success',
-        message: `Reenviamos a confirmação para ${email.trim()}.`,
+        message: `Reenviamos a confirmacao para ${email.trim()}.`,
       });
     } catch (error: any) {
       Alert.alert('Erro', error?.message ?? 'Nao foi possivel reenviar o email.');
       setFeedback({
         type: 'error',
-        message: 'Não conseguimos reenviar agora. Tente mais tarde.',
+        message: 'Nao conseguimos reenviar agora. Tente mais tarde.',
       });
     } finally {
       setLoading(false);
@@ -126,26 +124,6 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <LinearGradient colors={theme.gradient} style={styles.gradient}>
-        <View pointerEvents="none" style={styles.decorations}>
-          <LinearGradient
-            colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.05)']}
-            style={[styles.blob, styles.blobTopLeft]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-          <LinearGradient
-            colors={['rgba(14,165,233,0.35)', 'transparent']}
-            style={[styles.blob, styles.blobCenter]}
-            start={{ x: 0.2, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-          <LinearGradient
-            colors={['rgba(139,92,246,0.45)', 'rgba(59,130,246,0.1)']}
-            style={[styles.blob, styles.blobBottomRight]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0.8, y: 1 }}
-          />
-        </View>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.flex}
@@ -173,57 +151,51 @@ export default function LoginScreen() {
               </View>
               <Text style={styles.heroTitle}>Estude no seu ritmo</Text>
               <Text style={styles.heroDescription}>
-                Acesse aulas, trilhas e desafios em poucos segundos. Utilize um email válido, pois a confirmação é enviada para sua caixa de entrada.
+                Acesse aulas, trilhas e desafios em poucos segundos. Use um email valido, pois a confirmacao e enviada para sua caixa de entrada.
               </Text>
             </View>
-            <LinearGradient
-              colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.6)']}
-              style={styles.cardOuter}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <BlurView intensity={45} tint="light" style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.cardTitle}>Fazer login</Text>
-                  <Text style={styles.cardSubtitle}>Entre com seus dados ou utilize o Google.</Text>
-                </View>
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Fazer login</Text>
+                <Text style={styles.cardSubtitle}>Entre com seus dados ou utilize o Google.</Text>
+              </View>
 
-                <Input
-                  label="Email"
-                  value={email}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  placeholder="voce@email.com"
-                  onChangeText={(value) => {
-                    setEmail(value);
-                    if (errors.email) {
-                      setErrors((prev) => ({ ...prev, email: undefined }));
-                    }
-                  }}
-                  error={errors.email}
-                  style={styles.inputSpacing}
-                />
+              <Input
+                label="Email"
+                value={email}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="voce@email.com"
+                onChangeText={(value) => {
+                  setEmail(value);
+                  if (errors.email) {
+                    setErrors((prev) => ({ ...prev, email: undefined }));
+                  }
+                }}
+                error={errors.email}
+                style={styles.inputSpacing}
+              />
 
-                <Input
-                  label="Senha"
-                  value={password}
-                  placeholder="********"
-                  secureTextEntry
-                  onChangeText={(value) => {
-                    setPassword(value);
-                    if (errors.password) {
-                      setErrors((prev) => ({ ...prev, password: undefined }));
-                    }
-                  }}
-                  error={errors.password}
-                  style={styles.inputSpacing}
-                />
+              <Input
+                label="Senha"
+                value={password}
+                placeholder="********"
+                secureTextEntry
+                onChangeText={(value) => {
+                  setPassword(value);
+                  if (errors.password) {
+                    setErrors((prev) => ({ ...prev, password: undefined }));
+                  }
+                }}
+                error={errors.password}
+                style={styles.inputSpacing}
+              />
 
-                <Button
-                  title="Entrar com senha"
-                  onPress={handlePasswordSignIn}
-                  loading={loading}
-                />
+              <Button
+                title="Entrar com senha"
+                onPress={handlePasswordSignIn}
+                loading={loading}
+              />
 
 
               {showResendButton ? (
@@ -281,7 +253,7 @@ export default function LoginScreen() {
                 <Link href="/auth/forgot-password" style={styles.linkText}>
                   Esqueci minha senha
                 </Link>
-                <Text style={styles.dot}>•</Text>
+                <Text style={styles.dot}>|</Text>
                 <Link href="/auth/signup" style={styles.linkText}>
                   Criar conta
                 </Link>
@@ -307,8 +279,7 @@ export default function LoginScreen() {
                   </TouchableOpacity>
                 </View>
               ) : null}
-              </BlurView>
-            </LinearGradient>
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </LinearGradient>
@@ -332,33 +303,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 24,
     gap: 24,
-  },
-  decorations: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-  },
-  blob: {
-    position: 'absolute',
-    borderRadius: 240,
-    transform: [{ rotate: '12deg' }],
-  },
-  blobTopLeft: {
-    width: 260,
-    height: 260,
-    top: -120,
-    left: -80,
-  },
-  blobCenter: {
-    width: 220,
-    height: 220,
-    top: 160,
-    right: -60,
-  },
-  blobBottomRight: {
-    width: 280,
-    height: 280,
-    bottom: -140,
-    left: 40,
   },
   header: {
     flexDirection: 'row',
@@ -393,13 +337,13 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: 'rgba(255,255,255,0.95)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0A4AA3',
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 12 },
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 14 },
     elevation: 10,
   },
   heroImage: {
@@ -418,15 +362,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 24,
   },
-  cardOuter: {
-    borderRadius: 28,
-    padding: 1,
-  },
   card: {
-    borderRadius: 27,
+    width: '100%',
+    borderRadius: 30,
     padding: 24,
     gap: 20,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: 'rgba(255,255,255,0.97)',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 14,
   },
   cardHeader: {
     gap: 4,
