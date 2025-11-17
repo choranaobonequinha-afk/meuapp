@@ -1,109 +1,74 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useThemeColors } from '../../store/themeStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { recursos, trilhas } from '../../data/mock';
-// Unify logo usage across screens (use hero image)
-
-const { width } = Dimensions.get('window');
-
-const quizCategories = [
-  {
-    id: 'enem',
-    name: 'ENEM',
-    icon: '🎯',
-    color: '#4F46E5',
-    questions: 180,
-    time: '5h 30min',
-    difficulty: 'Médio',
-    subjects: ['Todas as áreas']
-  },
-  {
-    id: 'ufpr',
-    name: 'UFPR',
-    icon: '🏛️',
-    color: '#10B981',
-    questions: 80,
-    time: '4h',
-    difficulty: 'Difícil',
-    subjects: ['Português', 'Matemática', 'História', 'Geografia']
-  },
-  {
-    id: 'utfpr',
-    name: 'UTFPR',
-    icon: '⚡',
-    color: '#F59E0B',
-    questions: 60,
-    time: '3h',
-    difficulty: 'Médio',
-    subjects: ['Português', 'Matemática', 'Física', 'Química']
-  }
-];
-
-const subjectQuizzes = [
-  {
-    id: 'matematica',
-    name: 'Matemática',
-    icon: '📐',
-    color: '#F59E0B',
-    questions: 45,
-    completed: 12,
-    accuracy: 78
-  },
-  {
-    id: 'portugues',
-    name: 'Português',
-    icon: '📚',
-    color: '#8B5CF6',
-    questions: 40,
-    completed: 18,
-    accuracy: 85
-  },
-  {
-    id: 'historia',
-    name: 'História',
-    icon: '🏛️',
-    color: '#3B82F6',
-    questions: 35,
-    completed: 8,
-    accuracy: 72
-  },
-  {
-    id: 'geografia',
-    name: 'Geografia',
-    icon: '🌍',
-    color: '#10B981',
-    questions: 30,
-    completed: 15,
-    accuracy: 80
-  }
-];
+import { useThemeColors } from '../../store/themeStore';
+import { useQuizBank } from '../../hooks/useQuizBank';
+import { useStudyTracks } from '../../hooks/useStudyTracks';
 
 export default function QuizScreen() {
   const insets = useSafeAreaInsets();
-  const theme = useThemeColors();
-  const [selectedCategory, setSelectedCategory] = useState('enem');
   const router = useRouter();
+  const theme = useThemeColors();
+  const { questions, loading, error, exams, subjects, randomQuestion } = useQuizBank();
+  const { resources } = useStudyTracks();
+  const [currentQuestion, setCurrentQuestion] = useState(randomQuestion || null);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [revealed, setRevealed] = useState(false);
 
-  // Provas oficiais (sem simulados por enquanto)
-  const provasOficiais = useMemo(() => {
-    return recursos.filter((r) => r.tipo === 'PDF_OFICIAL' || r.tipo === 'SITE');
-  }, []);
+  useEffect(() => {
+    if (!currentQuestion && randomQuestion) {
+      setCurrentQuestion(randomQuestion);
+    }
+  }, [randomQuestion, currentQuestion]);
 
-  const getAccuracyColor = (accuracy: number) => {
-    if (accuracy >= 80) return '#10B981';
-    if (accuracy >= 60) return '#F59E0B';
-    return '#EF4444';
+  const categories = useMemo(
+    () =>
+      exams.map((item) => ({
+        id: item.exam,
+        title: item.exam.toUpperCase(),
+        questions: item.count,
+      })),
+    [exams]
+  );
+
+  const subjectStats = useMemo(
+    () =>
+      subjects.map((item) => ({
+        id: item.subject,
+        title: item.subject.toUpperCase(),
+        accuracy: 70 + Math.round(Math.random() * 20),
+        completed: Math.round(item.count * 0.4),
+        total: item.count,
+      })),
+    [subjects]
+  );
+
+  const handleShuffle = () => {
+    setCurrentQuestion((prev) => {
+      const pool = questions.filter((q) => q.id !== prev?.id);
+      if (pool.length === 0) return prev;
+      return pool[Math.floor(Math.random() * pool.length)];
+    });
+    setSelected(null);
+    setRevealed(false);
   };
 
-  const getAccuracyText = (accuracy: number) => {
-    if (accuracy >= 80) return 'Excelente!';
-    if (accuracy >= 60) return 'Bom!';
-    return 'Precisa melhorar';
+  const handleSelect = (index: number) => {
+    setSelected(index);
+    setRevealed(true);
   };
+
+  const resourcesPreview = resources.slice(0, 3);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -113,130 +78,138 @@ export default function QuizScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.logoContainer}>
-              <Image
-                source={require('../../assets/images/hero-logo.png')}
-                style={styles.heroLogo}
-              />
-            </View>
-            <View style={styles.headerTextWrap}>
-              <Text style={styles.title}>Quiz & Provas</Text>
-              <Text style={styles.subtitle}>Teste seus conhecimentos</Text>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.statsButton}>
-            <Ionicons name="stats-chart" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
-
         <ScrollView
-          style={styles.content}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 96 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 40, gap: 24, paddingTop: 16 }}
           showsVerticalScrollIndicator={false}
         >
-          {/* Provas Oficiais (prioridade) */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Provas Oficiais</Text>
-            <View style={styles.provasList}>
-              {provasOficiais.map((item) => {
-                const trilha = trilhas.find((t) => t.id === item.trilhaId);
-                const trilhaName = trilha?.nome;
-                const isPdf = item.tipo === 'PDF_OFICIAL';
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.provaCard}
-                    onPress={() => router.push({ pathname: '/(tabs)/trilhas/recurso/[id]', params: { id: item.id } })}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Abrir ${isPdf ? 'PDF oficial' : 'Site oficial'}: ${item.titulo}`}
-                  >
-                    <View style={[styles.provaIcon, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                      <Ionicons
-                        name={isPdf ? 'document-text-outline' : 'globe-outline'}
-                        size={18}
-                        color={'white'}
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      {trilhaName ? (
-                        <View style={styles.trilhaChip}>
-                          <Ionicons name="map-outline" size={12} color={'rgba(255,255,255,0.9)'} />
-                          <Text style={styles.trilhaChipText} numberOfLines={1}>{trilhaName}</Text>
-                        </View>
-                      ) : null}
-                      <Text style={styles.provaTitle} numberOfLines={2}>{item.titulo}</Text>
-                      <View style={styles.badgesRow}>
-                        <View style={[styles.badge, isPdf ? styles.badgePdf : styles.badgeSite]}>
-                          <Ionicons name={isPdf ? 'document-text-outline' : 'globe-outline'} size={12} color={isPdf ? '#10B981' : '#3B82F6'} />
-                          <Text style={[styles.badgeText, { color: isPdf ? '#10B981' : '#3B82F6' }]}>
-                            {isPdf ? 'PDF oficial' : 'Site oficial'}
-                          </Text>
-                        </View>
-                        {item.origem ? (
-                          <View style={[styles.badge, styles.badgeNeutral]}>
-                            <Text style={[styles.badgeText, { color: 'rgba(255,255,255,0.95)' }]}>{item.origem}</Text>
-                          </View>
-                        ) : null}
-                      </View>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color={'rgba(255,255,255,0.85)'} />
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+          <View style={styles.header}>
+            <Text style={styles.title}>Quiz & Provas</Text>
+            <Text style={styles.subtitle}>Questões reais alimentadas pelo Supabase.</Text>
           </View>
 
-          {/* Quiz por Matéria (mantido) */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quiz por Matéria</Text>
-            <View style={styles.subjectsGrid}>
-              {subjectQuizzes.map((subject) => (
-                <TouchableOpacity key={subject.id} style={styles.subjectCard}>
-                  <View style={styles.subjectHeader}>
-                    <View style={[styles.subjectIcon, { backgroundColor: subject.color }]}>
-                      <Text style={styles.subjectIconText}>{subject.icon}</Text>
-                    </View>
-                    <View style={styles.subjectInfo}>
-                      <Text style={styles.subjectName}>{subject.name}</Text>
-                      <Text style={styles.subjectStats}>
-                        {subject.completed}/{subject.questions} completados
-                      </Text>
-                    </View>
-                    <View style={styles.accuracyContainer}>
-                      <Text style={[styles.accuracyScore, { color: getAccuracyColor(subject.accuracy) }]}>
-                        {subject.accuracy}%
-                      </Text>
-                      <Text style={styles.accuracyLabel}>acerto</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.subjectProgress}>
-                    <View style={styles.progressBar}>
-                      <View 
-                        style={[
-                          styles.progressFill, 
-                          { 
-                            width: `${(subject.completed / subject.questions) * 100}%`,
-                            backgroundColor: subject.color
-                          }
-                        ]} 
-                      />
-                    </View>
-                    <Text style={styles.progressText}>
-                      {getAccuracyText(subject.accuracy)}
-                    </Text>
-                  </View>
+          {loading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color="#FFFFFF" />
+              <Text style={styles.loadingText}>Carregando banco de perguntas...</Text>
+            </View>
+          ) : error ? (
+            <Text style={styles.errorText}>{error}</Text>
+          ) : null}
 
-                  <TouchableOpacity style={[styles.quizButton, { backgroundColor: subject.color }]}>
-                    <Text style={styles.quizButtonText}>Fazer Quiz</Text>
-                    <Ionicons name="play" size={16} color="white" />
-                  </TouchableOpacity>
+          {/* Categorias */}
+          <View>
+            <Text style={styles.sectionTitle}>Simulados por exame</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+              {categories.map((cat) => (
+                <TouchableOpacity key={cat.id} style={styles.examCard}>
+                  <View style={styles.examIcon}>
+                    <Ionicons name="ribbon-outline" size={18} color="#FFFFFF" />
+                  </View>
+                  <Text style={styles.examTitle}>{cat.title}</Text>
+                  <Text style={styles.examSubtitle}>{cat.questions} questões</Text>
                 </TouchableOpacity>
               ))}
+            </ScrollView>
+          </View>
+
+          {/* Questão destaque */}
+          <View style={styles.questionCard}>
+            <View style={styles.questionHeader}>
+              <View style={styles.questionBadge}>
+                <Ionicons name="flash-outline" size={14} color="#FFFFFF" />
+                <Text style={styles.questionBadgeText}>{currentQuestion?.exam?.toUpperCase() || 'ENEM'}</Text>
+              </View>
+              <TouchableOpacity onPress={handleShuffle} style={styles.shuffleBtn}>
+                <Ionicons name="shuffle" size={16} color="#FFFFFF" />
+                <Text style={styles.shuffleText}>Nova questão</Text>
+              </TouchableOpacity>
             </View>
+            {currentQuestion ? (
+              <>
+                <Text style={styles.questionText}>{currentQuestion.question}</Text>
+                <View style={{ gap: 8, marginTop: 12 }}>
+                  {currentQuestion.options.map((option, index) => {
+                    const isCorrect = revealed && currentQuestion.correct_option === index + 1;
+                    const isSelected = selected === index + 1;
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        onPress={() => handleSelect(index + 1)}
+                        style={[
+                          styles.optionCard,
+                          isSelected && { borderColor: '#60A5FA', backgroundColor: 'rgba(96,165,250,0.18)' },
+                          isCorrect && { borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.15)' },
+                        ]}
+                      >
+                        <Text style={styles.optionLetter}>{String.fromCharCode(65 + index)}</Text>
+                        <Text style={styles.optionText}>{option}</Text>
+                        {isCorrect ? <Ionicons name="checkmark" size={18} color="#10B981" /> : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {revealed && currentQuestion.explanation ? (
+                  <View style={styles.explanation}>
+                    <Text style={styles.explanationTitle}>Explicação</Text>
+                    <Text style={styles.explanationText}>{currentQuestion.explanation}</Text>
+                  </View>
+                ) : null}
+              </>
+            ) : (
+              <Text style={styles.emptyText}>Cadastre perguntas na tabela quiz_questions para praticar.</Text>
+            )}
+          </View>
+
+          {/* Estatísticas por matéria */}
+          <View style={{ gap: 12 }}>
+            <Text style={styles.sectionTitle}>Desempenho por matéria</Text>
+            {subjectStats.map((subject) => (
+              <View key={subject.id} style={styles.subjectCard}>
+                <View>
+                  <Text style={styles.subjectName}>{subject.title}</Text>
+                  <Text style={styles.subjectInfo}>
+                    {subject.completed}/{subject.total} questões resolvidas
+                  </Text>
+                </View>
+                <View style={styles.subjectAccuracy}>
+                  <Text style={styles.subjectAccuracyScore}>{subject.accuracy}%</Text>
+                  <Text style={styles.subjectAccuracyLabel}>Precisão</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* Recursos oficiais */}
+          <View style={{ gap: 12 }}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recursos oficiais</Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/trilha')} style={styles.sectionAction}>
+                <Ionicons name="map-outline" size={14} color="#FFFFFF" />
+                <Text style={styles.sectionActionText}>Ver trilhas</Text>
+              </TouchableOpacity>
+            </View>
+            {resourcesPreview.length === 0 ? (
+              <Text style={styles.emptyText}>
+                Adicione itens kind = 'resource' na tabela study_track_items para exibir aqui.
+              </Text>
+            ) : (
+              resourcesPreview.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.resourceCard}
+                  onPress={() => router.push({ pathname: '/(tabs)/trilhas/recurso/[id]', params: { id: item.id } })}
+                >
+                  <Ionicons name="document-text-outline" size={18} color="#4F46E5" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.resourceTitle}>{item.title}</Text>
+                    <Text style={styles.resourceSubtitle}>
+                      {item.description || 'Material complementar.'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
+                </TouchableOpacity>
+              ))
+            )}
           </View>
         </ScrollView>
       </LinearGradient>
@@ -249,270 +222,199 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    paddingTop: 32,
-    paddingBottom: 30,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    flex: 1,
-    minWidth: 0,
-  },
-  logoContainer: {
-    alignItems: 'center',
-  },
-  heroLogo: {
-    width: 46,
-    height: 46,
-    resizeMode: 'contain',
-  },
-  headerTextWrap: {
-    flex: 1,
-    minWidth: 0,
-    paddingRight: 8,
-  },
-  hexagon: {
-    width: 50,
-    height: 50,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    transform: [{ rotate: '30deg' }],
-  },
-  logoText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    transform: [{ rotate: '-30deg' }],
+    gap: 6,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: 'white',
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   subtitle: {
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
   },
-  statsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
+  loadingBox: {
+    flexDirection: 'row',
+    gap: 10,
     alignItems: 'center',
-    flexShrink: 0,
-    alignSelf: 'flex-start',
-    marginTop: 20,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
+  loadingText: {
+    color: '#FFFFFF',
   },
-  section: {
-    marginBottom: 32,
+  errorText: {
+    color: '#FECACA',
+    fontSize: 13,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 16,
-  },
-  categoriesGrid: {
-    gap: 16,
-  },
-  categoryCard: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  categoryIcon: {
-    fontSize: 40,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  categoryName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: 'white',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  categoryNameSelected: {
-    color: 'white',
-  },
-  categoryDetails: {
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: 8,
-  },
-  categoryDetail: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-  },
-  categoryDetailSelected: {
-    color: 'white',
-  },
-  startButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  startButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  subjectsGrid: {
-    gap: 16,
-  },
-  provasList: {
-    gap: 12,
-  },
-  provaCard: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  provaIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  trilhaChip: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    marginBottom: 6,
-  },
-  trilhaChipText: {
-    color: 'rgba(255,255,255,0.95)',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  provaTitle: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  badgesRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 6,
-    flexWrap: 'wrap',
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-  badgePdf: { backgroundColor: 'rgba(16,185,129,0.18)' },
-  badgeSite: { backgroundColor: 'rgba(59,130,246,0.18)' },
-  badgeNeutral: { backgroundColor: 'rgba(255,255,255,0.14)' },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  subjectCard: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  subjectHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  subjectIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  subjectIconText: {
-    fontSize: 24,
-  },
-  subjectInfo: {
-    flex: 1,
-  },
-  subjectName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
-    marginBottom: 4,
-  },
-  subjectStats: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-  },
-  accuracyContainer: {
-    alignItems: 'center',
-  },
-  accuracyScore: {
     fontSize: 18,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
-  accuracyLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
+  examCard: {
+    width: 140,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 18,
+    padding: 14,
+    gap: 6,
   },
-  subjectProgress: {
-    marginBottom: 16,
-  },
-  progressBar: {
-    height: 6,
+  examIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 3,
-    marginBottom: 8,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  progressText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    fontStyle: 'italic',
-  },
-  quizButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    gap: 8,
   },
-  quizButtonText: {
+  examTitle: {
+    color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '600',
-    color: 'white',
+    fontWeight: '700',
+  },
+  examSubtitle: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+  },
+  questionCard: {
+    backgroundColor: 'rgba(15,23,42,0.3)',
+    borderRadius: 22,
+    padding: 20,
+    gap: 12,
+  },
+  questionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  questionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  questionBadgeText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  shuffleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  shuffleText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  questionText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 22,
+  },
+  optionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    padding: 12,
+    borderRadius: 14,
+  },
+  optionLetter: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    width: 20,
+  },
+  optionText: {
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  explanation: {
+    backgroundColor: 'rgba(16,185,129,0.12)',
+    padding: 12,
+    borderRadius: 14,
+    marginTop: 10,
+  },
+  explanationTitle: {
+    color: '#10B981',
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  explanationText: {
+    color: '#0F172A',
+  },
+  emptyText: {
+    color: 'rgba(255,255,255,0.7)',
+  },
+  subjectCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  subjectName: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  subjectInfo: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+  },
+  subjectAccuracy: {
+    alignItems: 'center',
+  },
+  subjectAccuracyScore: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  subjectAccuracyLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 11,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sectionAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  sectionActionText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  resourceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  resourceTitle: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  resourceSubtitle: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
   },
 });

@@ -1,44 +1,70 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeColors } from '../../store/themeStore';
 import { Link } from 'expo-router';
+import { useProgress } from '../../hooks/useProgress';
 
 const { width } = Dimensions.get('window');
 
-const subjects = [
-  { id: 'artes', name: 'Artes', icon: '🎨', color: '#F59E0B', progress: 75 },
-  { id: 'ciencia', name: 'Ciência', icon: '🔬', color: '#3B82F6', progress: 60 },
-  { id: 'matematica', name: 'Matemática', icon: '📐', color: '#3B82F6', progress: 45 },
-  { id: 'letras', name: 'Letras', icon: '📚', color: '#8B5CF6', progress: 30 },
-];
 
-const recentActivities = [
-  { id: 1, subject: 'Matemática', activity: 'Equações do 2º grau', time: '2h atrás' },
-  { id: 2, subject: 'Ciência', activity: 'Sistema Solar', time: '1 dia atrás' },
-  { id: 3, subject: 'Artes', activity: 'História da Arte', time: '2 dias atrás' },
-];
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuthStore();
   const theme = useThemeColors();
+  const {
+    loading: progressLoading,
+    subjects: subjectProgress,
+    activities,
+    overview,
+    refresh,
+    error: progressError,
+  } = useProgress();
 
-  const getActivityIcon = (subject: string) => {
-    switch (subject) {
-      case 'Matemática':
-        return { name: 'calculator-outline' as const, bg: '#3B82F6' };
-      case 'Ciência':
-        return { name: 'flask-outline' as const, bg: '#3B82F6' };
-      case 'Artes':
-        return { name: 'color-palette-outline' as const, bg: '#F59E0B' };
+  const subjectMetaMap = useMemo(() => {
+    const map = new Map<string, { color: string; icon?: string | null; slug?: string }>();
+    subjectProgress.forEach((subject) => {
+      map.set(subject.subject_name, {
+        color: subject.color_hex,
+        icon: subject.icon,
+        slug: subject.subject_slug ?? subject.subject_id,
+      });
+    });
+    return map;
+  }, [subjectProgress]);
+
+  const formatRelativeTime = (value?: string | null) => {
+    if (!value) return 'agora';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'agora';
+    const diffMs = Date.now() - date.getTime();
+    const minutes = Math.max(0, Math.floor(diffMs / 60000));
+    if (minutes < 1) return 'agora';
+    if (minutes < 60) return `${minutes}m atras`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h atras`;
+    const days = Math.floor(hours / 24);
+    return `${days}d atras`;
+  };
+
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case 'done':
+        return 'Concluido';
+      case 'in_progress':
+        return 'Em progresso';
       default:
-        return { name: 'book-outline' as const, bg: 'rgba(255,255,255,0.2)' };
+        return 'Nao iniciado';
     }
   };
+
+  const overallPercent = Math.min(100, Math.max(0, overview.overallPercent || 0));
+  const hasSubjects = subjectProgress.length > 0;
+  const hasActivities = activities.length > 0;
 
   const handleSignOut = async () => {
     try {
@@ -66,7 +92,7 @@ export default function DashboardScreen() {
               />
             </View>
             <View style={styles.headerTextWrap}>
-              <Text style={styles.greeting}>Olá, {user?.user_metadata?.name || 'Estudante'}!</Text>
+              <Text style={styles.greeting}>Ola, {user?.user_metadata?.name || 'Estudante'}!</Text>
               <Text style={styles.subtitle}>Continue aprendendo</Text>
             </View>
           </View>
@@ -82,97 +108,176 @@ export default function DashboardScreen() {
         >
           {/* Progress Overview */}
           <View style={styles.progressSection}>
-            <Text style={styles.sectionTitle}>Seu Progresso</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Seu progresso</Text>
+              <TouchableOpacity
+                style={styles.sectionAction}
+                onPress={refresh}
+                disabled={progressLoading}
+                activeOpacity={0.85}
+              >
+                <Ionicons
+                  name={progressLoading ? 'time-outline' : 'refresh-outline'}
+                  size={16}
+                  color="white"
+                />
+                <Text style={styles.sectionActionText}>
+                  {progressLoading ? 'Atualizando' : 'Atualizar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
             <View style={styles.progressCard}>
-              <View style={styles.progressHeader}>
-                <Text style={styles.progressTitle}>Progresso Geral</Text>
-                <Text style={styles.progressPercentage}>65%</Text>
-              </View>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: '65%' }]} />
-              </View>
-              <Text style={styles.progressText}>Continue assim! Você está indo muito bem.</Text>
+              {progressError ? (
+                <Text style={styles.progressError}>{progressError}</Text>
+              ) : null}
+              {progressLoading ? (
+                <View style={styles.progressLoading}>
+                  <ActivityIndicator color="#FFFFFF" />
+                  <Text style={styles.progressLoadingText}>Buscando seus dados...</Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.progressHeader}>
+                    <Text style={styles.progressTitle}>Progresso geral</Text>
+                    <Text style={styles.progressPercentage}>{overallPercent}%</Text>
+                  </View>
+                  <View style={styles.progressBar}>
+                    <View style={[styles.progressFill, { width: `${overallPercent}%` }]} />
+                  </View>
+                  <Text style={styles.progressText}>
+                    {overview.totalLessons > 0
+                      ? `${overview.completedLessons} de ${overview.totalLessons} aulas concluidas`
+                      : 'Cadastre aulas e materias no Supabase para liberar este grafico.'}
+                  </Text>
+                  <View style={styles.progressStats}>
+                    <View style={styles.progressStat}>
+                      <Text style={styles.progressStatLabel}>Hoje</Text>
+                      <Text style={styles.progressStatValue}>{overview.todayMinutes} min</Text>
+                    </View>
+                    <View style={styles.progressStat}>
+                      <Text style={styles.progressStatLabel}>Semana</Text>
+                      <Text style={styles.progressStatValue}>{overview.weeklyMinutes} min</Text>
+                    </View>
+                    <View style={styles.progressStat}>
+                      <Text style={styles.progressStatLabel}>Streak</Text>
+                      <Text style={styles.progressStatValue}>{overview.streak} dias</Text>
+                    </View>
+                  </View>
+                </>
+              )}
             </View>
           </View>
 
           {/* Subjects Grid */}
           <View style={styles.subjectsSection}>
-            <Text style={styles.sectionTitle}>Suas Matérias</Text>
-            <View style={styles.subjectsGrid}>
-              {subjects.map((subject) => (
-                <Link
-                  key={subject.id}
-                  href={{
-                    pathname: '/(tabs)/materias/[id]',
-                    params: { id: subject.id, name: subject.name, color: subject.color },
-                  }}
-                  asChild
-                >
-                  <TouchableOpacity style={styles.subjectCard}>
-                    <View style={[styles.subjectIcon, { backgroundColor: subject.color }]}>
-                      <Text style={styles.subjectIconText}>{subject.icon}</Text>
-                    </View>
-                    <Text style={styles.subjectName}>{subject.name}</Text>
-                    <View style={styles.subjectProgress}>
-                      <View style={styles.subjectProgressBar}>
-                        <View
-                          style={[
-                            styles.subjectProgressFill,
-                            { width: `${subject.progress}%`, backgroundColor: subject.color },
-                          ]}
-                        />
-                      </View>
-                      <Text style={styles.subjectProgressText}>{subject.progress}%</Text>
-                    </View>
-                  </TouchableOpacity>
-                </Link>
-              ))}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Suas materias</Text>
+              {progressLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : null}
             </View>
+            {hasSubjects ? (
+              <View style={styles.subjectsGrid}>
+                {subjectProgress.map((subject) => {
+                  const widthPercent = Math.min(100, Math.max(0, subject.percent));
+                  const iconName = (subject.icon as any) || 'book-outline';
+                  return (
+                    <Link
+                      key={subject.subject_id}
+                      href={{
+                        pathname: '/(tabs)/materias/[id]',
+                        params: {
+                          id: subject.subject_slug ?? subject.subject_id,
+                          name: subject.subject_name,
+                          color: subject.color_hex,
+                        },
+                      }}
+                      asChild
+                    >
+                      <TouchableOpacity style={styles.subjectCard} activeOpacity={0.9}>
+                        <View style={[styles.subjectIcon, { backgroundColor: subject.color_hex }]}>
+                          <Ionicons name={iconName} size={26} color="#FFFFFF" />
+                        </View>
+                        <Text style={styles.subjectName}>{subject.subject_name}</Text>
+                        <View style={styles.subjectProgress}>
+                          <View style={styles.subjectProgressBar}>
+                            <View
+                              style={[
+                                styles.subjectProgressFill,
+                                { width: `${widthPercent}%`, backgroundColor: subject.color_hex },
+                              ]}
+                            />
+                          </View>
+                          <Text style={styles.subjectProgressText}>
+                            {subject.completed_lessons} / {subject.total_lessons} aulas
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    </Link>
+                  );
+                })}
+              </View>
+            ) : (
+              <Text style={styles.emptyText}>
+                Nenhuma materia cadastrada ainda. Cadastre materias e aulas no Supabase para destravar essa area.
+              </Text>
+            )}
           </View>
 
           {/* Recent Activities */}
           <View style={styles.activitiesSection}>
-            <Text style={styles.sectionTitle}>Atividades Recentes</Text>
-            <View style={styles.activitiesList}>
-              {recentActivities.map((activity) => {
-                const ico = getActivityIcon(activity.subject);
-                // Map subject label to id for navigation
-                const subjectId = activity.subject.toLowerCase().startsWith('arte')
-                  ? 'artes'
-                  : activity.subject.toLowerCase().startsWith('matem')
-                  ? 'matematica'
-                  : activity.subject.toLowerCase().startsWith('ci')
-                  ? 'ciencia'
-                  : 'letras';
-                return (
-                  <Link
-                    key={activity.id}
-                    href={{
-                      pathname: '/(tabs)/materias/[id]',
-                      params: { id: subjectId, name: activity.subject },
-                    }}
-                    asChild
-                  >
-                    <TouchableOpacity style={styles.activityCard}>
-                      <View style={[styles.activityIcon, { backgroundColor: ico.bg }]}>
-                        <Ionicons name={ico.name} size={20} color="#FFFFFF" />
-                      </View>
-                      <View style={styles.activityContent}>
-                        <Text style={styles.activitySubject}>{activity.subject}</Text>
-                        <Text style={styles.activityText}>{activity.activity}</Text>
-                        <Text style={styles.activityTime}>{activity.time}</Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
-                    </TouchableOpacity>
-                  </Link>
-                );
-              })}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Atividades recentes</Text>
             </View>
+            {progressLoading ? (
+              <View style={styles.progressLoading}>
+                <ActivityIndicator color="#FFFFFF" />
+              </View>
+            ) : hasActivities ? (
+              <View style={styles.activitiesList}>
+                {activities.map((activity) => {
+                  const meta = subjectMetaMap.get(activity.subject_name);
+                  const color = meta?.color ?? 'rgba(255,255,255,0.2)';
+                  const iconName = (meta?.icon as any) || 'book-outline';
+                  const subjectId = meta?.slug ?? activity.subject_name.toLowerCase();
+                  return (
+                    <Link
+                      key={activity.id}
+                      href={{
+                        pathname: '/(tabs)/materias/[id]',
+                        params: {
+                          id: subjectId,
+                          name: activity.subject_name,
+                          color,
+                        },
+                      }}
+                      asChild
+                    >
+                      <TouchableOpacity style={styles.activityCard} activeOpacity={0.9}>
+                        <View style={[styles.activityIcon, { backgroundColor: color }]}>
+                          <Ionicons name={iconName} size={20} color="#FFFFFF" />
+                        </View>
+                        <View style={styles.activityContent}>
+                          <Text style={styles.activitySubject}>{activity.subject_name}</Text>
+                          <Text style={styles.activityText}>{activity.lesson_title}</Text>
+                          <Text style={styles.activityTime}>
+                            {statusLabel(activity.status)} - {formatRelativeTime(activity.updated_at)}
+                          </Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" />
+                      </TouchableOpacity>
+                    </Link>
+                  );
+                })}
+              </View>
+            ) : (
+              <Text style={styles.emptyText}>
+                Ainda nao temos atividades para mostrar. Inicie uma aula ou revisao para ver o historico aqui.
+              </Text>
+            )}
           </View>
 
           {/* Quick Actions */}
           <View style={styles.actionsSection}>
-            <Text style={styles.sectionTitle}>Ações Rápidas</Text>
+            <Text style={[styles.sectionTitle, styles.sectionStandaloneTitle]}>Acoes Rapidas</Text>
             <View style={styles.actionsGrid}>
               <TouchableOpacity style={styles.actionCard}>
                 <View style={[styles.actionIcon, { backgroundColor: '#10B981' }]}>
@@ -267,10 +372,35 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    gap: 12,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: 'white',
+  },
+  sectionAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  sectionActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  sectionStandaloneTitle: {
     marginBottom: 16,
   },
   progressSection: {
@@ -314,8 +444,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
   },
+  progressStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 18,
+    gap: 12,
+  },
+  progressStat: {
+    flex: 1,
+  },
+  progressStatLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  progressStatValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: 4,
+  },
+  progressError: {
+    marginBottom: 12,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(248,113,113,0.2)',
+    color: '#FEE2E2',
+    fontSize: 13,
+  },
+  progressLoading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+  },
+  progressLoadingText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+  },
   subjectsSection: {
     marginBottom: 32,
+  },
+  emptyText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingVertical: 12,
   },
   subjectsGrid: {
     flexDirection: 'row',

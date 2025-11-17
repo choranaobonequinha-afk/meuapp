@@ -1,153 +1,97 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Platform } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Dimensions,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useThemeColors } from '../../store/themeStore';
 import { Ionicons } from '@expo/vector-icons';
-// Unify logo usage across screens (use hero image)
+import { useThemeColors } from '../../store/themeStore';
+import { useLessons } from '../../hooks/useLessons';
 
 const { width } = Dimensions.get('window');
 
-const videoCategories = [
-  { id: 'todos', name: 'Todos', icon: '🎬', color: '#4F46E5' },
-  { id: 'matematica', name: 'Matemática', icon: '📐', color: '#3B82F6' },
-  { id: 'portugues', name: 'Português', icon: '📚', color: '#8B5CF6' },
-  { id: 'historia', name: 'História', icon: '🏛️', color: '#3B82F6' },
-  { id: 'geografia', name: 'Geografia', icon: '🌍', color: '#10B981' },
-  { id: 'fisica', name: 'Física', icon: '⚡', color: '#EF4444' },
-  { id: 'quimica', name: 'Química', icon: '🧪', color: '#8B5CF6' },
-];
-
-const featuredVideos = [
-  {
-    id: 1,
-    title: 'Funções do 1º Grau - Matemática ENEM',
-    channel: 'Matemática Rio',
-    views: '2.1M',
-    duration: '15:32',
-    thumbnail: 'https://via.placeholder.com/300x180/4F46E5/FFFFFF?text=Matemática',
-    subject: 'matematica',
-    rating: 4.8,
-    watched: false
-  },
-  {
-    id: 2,
-    title: 'Interpretação de Texto - Dicas para ENEM',
-    channel: 'Professor Noslen',
-    views: '1.8M',
-    duration: '12:45',
-    thumbnail: 'https://via.placeholder.com/300x180/8B5CF6/FFFFFF?text=Português',
-    subject: 'portugues',
-    rating: 4.9,
-    watched: false
-  },
-  {
-    id: 3,
-    title: 'História do Brasil - Independência',
-    channel: 'História Online',
-    views: '956K',
-    duration: '18:20',
-    thumbnail: 'https://via.placeholder.com/300x180/3B82F6/FFFFFF?text=História',
-    subject: 'historia',
-    rating: 4.7,
-    watched: true
-  }
-];
-
-const subjectVideos = {
-  matematica: [
-    {
-      id: 4,
-      title: 'Álgebra Linear - Conceitos Básicos',
-      channel: 'Matemática Rio',
-      views: '450K',
-      duration: '22:15',
-      thumbnail: 'https://via.placeholder.com/300x180/F59E0B/FFFFFF?text=Álgebra',
-      rating: 4.6,
-      watched: false
-    },
-    {
-      id: 5,
-      title: 'Geometria Analítica - ENEM',
-      channel: 'Matemática Rio',
-      views: '320K',
-      duration: '19:30',
-      thumbnail: 'https://via.placeholder.com/300x180/F59E0B/FFFFFF?text=Geometria',
-      rating: 4.5,
-      watched: false
-    }
-  ],
-  portugues: [
-    {
-      id: 6,
-      title: 'Gramática - Classes de Palavras',
-      channel: 'Professor Noslen',
-      views: '280K',
-      duration: '16:45',
-      thumbnail: 'https://via.placeholder.com/300x180/8B5CF6/FFFFFF?text=Gramática',
-      rating: 4.8,
-      watched: false
-    },
-    {
-      id: 7,
-      title: 'Literatura - Modernismo',
-      channel: 'Professor Noslen',
-      views: '195K',
-      duration: '14:20',
-      thumbnail: 'https://via.placeholder.com/300x180/8B5CF6/FFFFFF?text=Literatura',
-      rating: 4.7,
-      watched: false
-    }
-  ]
+const ICON_BY_SUBJECT: Record<string, keyof typeof Ionicons.glyphMap> = {
+  matematica: 'calculator-outline',
+  ciencias: 'flask-outline',
+  humanas: 'book-outline',
+  geral: 'play-circle-outline',
 };
-
-const recommendedChannels = [
-  {
-    id: 1,
-    name: 'Matemática Rio',
-    subscribers: '2.1M',
-    avatar: 'https://via.placeholder.com/60x60/4F46E5/FFFFFF?text=MR',
-    subject: 'Matemática',
-    videos: 450
-  },
-  {
-    id: 2,
-    name: 'Professor Noslen',
-    subscribers: '1.8M',
-    avatar: 'https://via.placeholder.com/60x60/8B5CF6/FFFFFF?text=PN',
-    subject: 'Português',
-    videos: 320
-  },
-  {
-    id: 3,
-    name: 'História Online',
-    subscribers: '956K',
-    avatar: 'https://via.placeholder.com/60x60/3B82F6/FFFFFF?text=HO',
-    subject: 'História',
-    videos: 280
-  }
-];
 
 export default function VideosScreen() {
   const insets = useSafeAreaInsets();
   const theme = useThemeColors();
-  const [selectedCategory, setSelectedCategory] = useState('todos');
-  const catScrollRef = useRef<ScrollView | null>(null);
-  const [catX, setCatX] = useState(0);
+  const {
+    featuredLessons,
+    lessonsBySubject,
+    subjectsMeta,
+    loading,
+    error,
+    refresh,
+    markLessonAsWatched,
+  } = useLessons();
+  const [selectedSubject, setSelectedSubject] = useState('todos');
 
-  const getVideosToShow = () => {
-    if (selectedCategory === 'todos') {
-      return [...featuredVideos, ...Object.values(subjectVideos).flat()];
+  const categories = useMemo(
+    () => [
+      {
+        id: 'todos',
+        name: 'Todos',
+        color: '#4F46E5',
+        icon: 'sparkles-outline' as const,
+        lessons: featuredLessons.length || stateCount(lessonsBySubject),
+      },
+      ...subjectsMeta.map((meta) => ({
+        id: meta.slug,
+        name: meta.name,
+        color: meta.color,
+        icon: ICON_BY_SUBJECT[meta.slug] || 'book-outline',
+        lessons: meta.lessons,
+      })),
+    ],
+    [featuredLessons.length, lessonsBySubject, subjectsMeta]
+  );
+
+  const heroLessons = useMemo(() => {
+    if (selectedSubject === 'todos') return featuredLessons;
+    return lessonsBySubject.get(selectedSubject) ?? [];
+  }, [featuredLessons, lessonsBySubject, selectedSubject]);
+
+  const groupedLessons = useMemo(() => {
+    if (selectedSubject === 'todos') {
+      return Array.from(lessonsBySubject.entries());
     }
-    return subjectVideos[selectedCategory as keyof typeof subjectVideos] || [];
+    return [[selectedSubject, lessonsBySubject.get(selectedSubject) ?? []]];
+  }, [lessonsBySubject, selectedSubject]);
+
+  const recommendedChannels = useMemo(
+    () =>
+      subjectsMeta.slice(0, 3).map((meta) => ({
+        id: meta.slug,
+        name: meta.name,
+        lessons: meta.lessons,
+        color: meta.color,
+      })),
+    [subjectsMeta]
+  );
+
+  const openVideo = async (url?: string | null) => {
+    if (!url) return;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      // ignore
+    }
   };
 
-  const formatViews = (views: string) => {
-    const num = parseInt(views.replace('K', '000').replace('M', '000000'));
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num.toString();
-  };
+  const isEmpty = !loading && heroLessons.length === 0 && groupedLessons.every(([, list]) => list.length === 0);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -157,351 +101,377 @@ export default function VideosScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.logoContainer}>
-              <Image
-                source={require('../../assets/images/hero-logo.png')}
-                style={styles.heroLogo}
-              />
-            </View>
-            <View style={styles.headerTextWrap}>
-              <Text style={styles.title}>Vídeos Educativos</Text>
-              <Text style={styles.subtitle}>Aprenda com os melhores</Text>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.searchButton}>
-            <Ionicons name="search" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
-
         <ScrollView
-          style={styles.content}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 96 }}
+          style={styles.scroll}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 40, gap: 32 }}
           showsVerticalScrollIndicator={false}
         >
-          {/* Categories */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Categorias</Text>
-            <View>
-            <ScrollView
-              horizontal
-              nestedScrollEnabled
-              showsHorizontalScrollIndicator={false}
-              style={styles.categoriesScroll}
-              contentContainerStyle={{ paddingRight: 20 }}
-              ref={catScrollRef}
-              onScroll={(e) => setCatX(e.nativeEvent.contentOffset.x)}
-              scrollEventThrottle={16}
-            >
-              {videoCategories.map((category) => (
-                <TouchableOpacity
-                  key={category.id}
-                  style={[
-                    styles.categoryButton,
-                    selectedCategory === category.id && { backgroundColor: category.color }
-                  ]}
-                  onPress={() => setSelectedCategory(category.id)}
-                >
-                  <Text style={styles.categoryIcon}>{category.icon}</Text>
-                  <Text style={[
-                    styles.categoryName,
-                    selectedCategory === category.id && styles.categoryNameSelected
-                  ]}>
-                    {category.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            {Platform.OS === 'web' && (
-              <View style={styles.catArrows} pointerEvents="box-none">
-                <TouchableOpacity
-                  style={[styles.catArrowBtn, { left: 0, opacity: catX <= 0 ? 0.3 : 1 }]}
-                  onPress={() => {
-                    const step = Math.round(width * 0.6);
-                    const next = Math.max(0, catX - step);
-                    catScrollRef.current?.scrollTo({ x: next, animated: true });
-                  }}
-                >
-                  <Ionicons name="chevron-back" size={18} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.catArrowBtn, { right: 0 }]}
-                  onPress={() => {
-                    const step = Math.round(width * 0.6);
-                    const next = catX + step;
-                    catScrollRef.current?.scrollTo({ x: next, animated: true });
-                  }}
-                >
-                  <Ionicons name="chevron-forward" size={18} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            )}
-            </View>
+          <View style={styles.header}>
+            <Text style={styles.screenTitle}>Aulas em video</Text>
+            <Text style={styles.screenSubtitle}>Assista, marque como concluido e continue o progresso.</Text>
+            {loading ? null : error ? (
+              <TouchableOpacity onPress={refresh} style={styles.refreshBtn}>
+                <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                <Text style={styles.refreshText}>Tentar novamente</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
 
-          {/* Featured Videos */}
-          {selectedCategory === 'todos' && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Vídeos em Destaque</Text>
-              <View style={styles.featuredGrid}>
-                {featuredVideos.map((video) => (
-                  <TouchableOpacity key={video.id} style={styles.videoCard}>
-                    <View style={styles.thumbnailContainer}>
-                      <Image source={{ uri: video.thumbnail }} style={styles.thumbnail} />
-                      <View style={styles.durationBadge}>
-                        <Text style={styles.durationText}>{video.duration}</Text>
-                      </View>
-                      {video.watched && (
-                        <View style={styles.watchedBadge}>
-                          <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                        </View>
+          {/* Categorias */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category.id}
+                style={[
+                  styles.categoryChip,
+                  {
+                    backgroundColor:
+                      selectedSubject === category.id ? category.color : 'rgba(255,255,255,0.08)',
+                    borderColor: selectedSubject === category.id ? category.color : 'rgba(255,255,255,0.2)',
+                  },
+                ]}
+                onPress={() => setSelectedSubject(category.id)}
+              >
+                <Ionicons
+                  name={category.icon}
+                  size={16}
+                  color={selectedSubject === category.id ? '#FFFFFF' : category.color}
+                />
+                <Text
+                  style={[
+                    styles.categoryText,
+                    { color: selectedSubject === category.id ? '#FFFFFF' : category.color },
+                  ]}
+                >
+                  {category.name} ({category.lessons})
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Destaques */}
+          <View>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {selectedSubject === 'todos' ? 'Em destaque' : 'Para voce'}
+              </Text>
+              <TouchableOpacity onPress={refresh} style={styles.sectionAction}>
+                <Ionicons name="refresh" size={14} color="#FFFFFF" />
+                <Text style={styles.sectionActionText}>Atualizar</Text>
+              </TouchableOpacity>
+            </View>
+            {loading ? (
+              <View style={styles.loadingBox}>
+                <ActivityIndicator color="#FFFFFF" />
+                <Text style={styles.loadingText}>Carregando videos...</Text>
+              </View>
+            ) : heroLessons.length === 0 ? (
+              <Text style={styles.emptyText}>Ainda nao temos videos para essa materia.</Text>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 16, paddingRight: 16 }}
+              >
+                {heroLessons.map((lesson) => (
+                  <View key={lesson.id} style={[styles.featuredCard, { width: width * 0.8 }]}>
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => openVideo(lesson.video_url)}
+                      style={styles.thumbnailContainer}
+                    >
+                      {lesson.thumbnail_url ? (
+                        <Image source={{ uri: lesson.thumbnail_url }} style={styles.thumbnail} />
+                      ) : (
+                        <View style={[styles.thumbnail, { backgroundColor: 'rgba(255,255,255,0.08)' }]} />
                       )}
-                    </View>
-                    <View style={styles.videoInfo}>
-                      <Text style={styles.videoTitle} numberOfLines={2}>
-                        {video.title}
-                      </Text>
-                      <Text style={styles.channelName}>{video.channel}</Text>
-                      <View style={styles.videoStats}>
-                        <Text style={styles.viewsText}>{formatViews(video.views)} visualizações</Text>
-                        <View style={styles.ratingContainer}>
-                          <Ionicons name="star" size={14} color="#F59E0B" />
-                          <Text style={styles.ratingText}>{video.rating}</Text>
+                      <View style={styles.durationBadge}>
+                        <Ionicons name="time-outline" size={12} color="#FFFFFF" />
+                        <Text style={styles.durationText}>{lesson.duration_minutes} min</Text>
+                      </View>
+                      {lesson.progress?.status === 'done' ? (
+                        <View style={styles.watchedBadge}>
+                          <Ionicons name="checkmark-circle" size={18} color="#10B981" />
                         </View>
+                      ) : null}
+                    </TouchableOpacity>
+                    <View style={styles.videoInfo}>
+                      <Text style={styles.videoTitle}>{lesson.title}</Text>
+                      <Text style={styles.channelName}>{lesson.description || 'Aula estruturada.'}</Text>
+                      <View style={styles.videoStats}>
+                        <Text style={styles.viewsText}>
+                          {lesson.subject?.name || lesson.subject_tag}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => markLessonAsWatched(lesson.id)}
+                          style={styles.tagButton}
+                        >
+                          <Ionicons
+                            name={lesson.progress?.status === 'done' ? 'checkmark' : 'bookmark-outline'}
+                            size={14}
+                            color="#FFFFFF"
+                          />
+                          <Text style={styles.tagButtonText}>
+                            {lesson.progress?.status === 'done' ? 'Concluido' : 'Marcar feito'}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
-                  </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+
+          {/* Materias */}
+          {groupedLessons.map(([subjectSlug, lessons]) => {
+            if (lessons.length === 0) return null;
+            const meta = subjectsMeta.find((s) => s.slug === subjectSlug);
+            return (
+              <View key={subjectSlug} style={styles.subjectSection}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>
+                    {meta?.name || subjectSlug}
+                  </Text>
+                  <View style={styles.sectionTag}>
+                    <Ionicons name="play" size={12} color="#FFFFFF" />
+                    <Text style={styles.sectionTagText}>{lessons.length} aulas</Text>
+                  </View>
+                </View>
+                <View style={styles.subjectGrid}>
+                  {lessons.map((lesson) => (
+                    <View key={lesson.id} style={styles.subjectCard}>
+                      <View style={styles.subjectHeader}>
+                        <View
+                          style={[
+                            styles.subjectIcon,
+                            { backgroundColor: (meta?.color || '#4F46E5') + '33' },
+                          ]}
+                        >
+                          <Ionicons
+                            name={ICON_BY_SUBJECT[subjectSlug] || 'book-outline'}
+                            size={20}
+                            color={meta?.color || '#4F46E5'}
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.subjectName}>{lesson.title}</Text>
+                          <Text style={styles.subjectMeta}>
+                            {lesson.module} • {lesson.duration_minutes} min
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.subjectDescription} numberOfLines={3}>
+                        {lesson.description || 'Resumo disponivel dentro da aula.'}
+                      </Text>
+                      <View style={styles.subjectActions}>
+                        <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={() => openVideo(lesson.video_url || lesson.resource_url || undefined)}
+                        >
+                          <Ionicons name="play-outline" size={16} color="#FFFFFF" />
+                          <Text style={styles.actionButtonText}>Assistir</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.actionButton,
+                            lesson.progress?.status === 'done' && { backgroundColor: 'rgba(16,185,129,0.4)' },
+                          ]}
+                          onPress={() => markLessonAsWatched(lesson.id)}
+                        >
+                          <Ionicons
+                            name={lesson.progress?.status === 'done' ? 'checkmark-done' : 'checkbox-outline'}
+                            size={16}
+                            color="#FFFFFF"
+                          />
+                          <Text style={styles.actionButtonText}>
+                            {lesson.progress?.status === 'done' ? 'Feito' : 'Concluir'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            );
+          })}
+
+          {/* Canais recomendados */}
+          <View>
+            <Text style={styles.sectionTitle}>Canais recomendados</Text>
+            {recommendedChannels.length === 0 ? (
+              <Text style={styles.emptyText}>Adicione mais materias para ver recomendacoes.</Text>
+            ) : (
+              <View style={styles.channelsList}>
+                {recommendedChannels.map((channel) => (
+                  <View key={channel.id} style={styles.channelCard}>
+                    <View
+                      style={[
+                        styles.channelAvatar,
+                        { backgroundColor: channel.color + '33' },
+                      ]}
+                    >
+                      <Ionicons name="school-outline" size={18} color={channel.color} />
+                    </View>
+                    <View style={styles.channelInfo}>
+                      <Text style={styles.channelNameText}>{channel.name}</Text>
+                      <Text style={styles.channelStats}>
+                        {channel.lessons} aulas disponiveis nesta materia
+                      </Text>
+                    </View>
+                    <TouchableOpacity style={styles.subscribeButton}>
+                      <Text style={styles.subscribeText}>Ver aulas</Text>
+                    </TouchableOpacity>
+                  </View>
                 ))}
               </View>
-            </View>
-          )}
+            )}
+          </View>
 
-          {/* Subject Videos */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {selectedCategory === 'todos' ? 'Vídeos por Matéria' : `Vídeos de ${videoCategories.find(c => c.id === selectedCategory)?.name}`}
-            </Text>
-            <View style={styles.videosGrid}>
-              {getVideosToShow().map((video) => (
-                <TouchableOpacity key={video.id} style={styles.videoCard}>
-                  <View style={styles.thumbnailContainer}>
-                    <Image source={{ uri: video.thumbnail }} style={styles.thumbnail} />
-                    <View style={styles.durationBadge}>
-                      <Text style={styles.durationText}>{video.duration}</Text>
-                    </View>
-                    {video.watched && (
-                      <View style={styles.watchedBadge}>
-                        <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.videoInfo}>
-                    <Text style={styles.videoTitle} numberOfLines={2}>
-                      {video.title}
-                    </Text>
-                    <Text style={styles.channelName}>{video.channel}</Text>
-                    <View style={styles.videoStats}>
-                      <Text style={styles.viewsText}>{formatViews(video.views)} visualizações</Text>
-                      <View style={styles.ratingContainer}>
-                        <Ionicons name="star" size={14} color="#F59E0B" />
-                        <Text style={styles.ratingText}>{video.rating}</Text>
-                      </View>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
+          {/* Dicas */}
+          <View style={styles.tipsCard}>
+            <Text style={styles.tipsTitle}>Dicas rapidas</Text>
+            <View style={styles.tipItem}>
+              <Ionicons name="timer-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.tipText}>
+                Reserve blocos curtos de 25 minutos para assistir aulas sem distrações.
+              </Text>
+            </View>
+            <View style={styles.tipItem}>
+              <Ionicons name="color-wand-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.tipText}>
+                Marque como concluido para atualizar seu progresso automaticamente.
+              </Text>
             </View>
           </View>
 
-          {/* Recommended Channels */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Canais Recomendados</Text>
-            <View style={styles.channelsList}>
-              {recommendedChannels.map((channel) => (
-                <TouchableOpacity key={channel.id} style={styles.channelCard}>
-                  <Image source={{ uri: channel.avatar }} style={styles.channelAvatar} />
-                  <View style={styles.channelInfo}>
-                    <Text style={styles.channelName}>{channel.name}</Text>
-                    <Text style={styles.channelSubject}>{channel.subject}</Text>
-                    <Text style={styles.channelStats}>
-                      {channel.subscribers} inscritos • {channel.videos} vídeos
-                    </Text>
-                  </View>
-                  <TouchableOpacity style={styles.subscribeButton}>
-                    <Text style={styles.subscribeText}>Inscrever</Text>
-                  </TouchableOpacity>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          {error && !loading ? (
+            <Text style={styles.errorText}>Erro: {error}</Text>
+          ) : null}
 
-          {/* Study Tips */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Dicas de Estudo</Text>
-            <View style={styles.tipsCard}>
-              <View style={styles.tipItem}>
-                <Ionicons name="play-circle-outline" size={24} color="#10B981" />
-                <Text style={styles.tipText}>
-                  Assista vídeos em velocidade 1.5x para economizar tempo
-                </Text>
-              </View>
-              <View style={styles.tipItem}>
-                <Ionicons name="bookmark-outline" size={24} color="#3B82F6" />
-                <Text style={styles.tipText}>
-                  Salve vídeos importantes para revisar depois
-                </Text>
-              </View>
-              <View style={styles.tipItem}>
-                <Ionicons name="pause-outline" size={24} color="#F59E0B" />
-                <Text style={styles.tipText}>
-                  Faça pausas para anotar pontos importantes
-                </Text>
-              </View>
+          {isEmpty ? (
+            <View style={styles.emptyStateBox}>
+              <Text style={styles.emptyTitle}>Sem conteudo ainda</Text>
+              <Text style={styles.emptySubtitle}>
+                Cadastre novas aulas no Supabase (tabela lessons) para que apareçam aqui.
+              </Text>
             </View>
-    </View>
+          ) : null}
         </ScrollView>
       </LinearGradient>
     </SafeAreaView>
   );
 }
 
+function stateCount(map: Map<string, unknown[]>) {
+  let total = 0;
+  map.forEach((list) => {
+    total += list.length;
+  });
+  return total;
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scroll: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    paddingTop: 32,
-    paddingBottom: 30,
+    gap: 8,
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    flex: 1,
-    minWidth: 0,
-  },
-  logoContainer: {
-    alignItems: 'center',
-  },
-  heroLogo: {
-    width: 46,
-    height: 46,
-    resizeMode: 'contain',
-  },
-  headerTextWrap: {
-    flex: 1,
-    minWidth: 0,
-    paddingRight: 8,
-  },
-  hexagon: {
-    width: 50,
-    height: 50,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    transform: [{ rotate: '30deg' }],
-  },
-  logoText: {
+  screenTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    transform: [{ rotate: '-30deg' }],
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: 'white',
-  },
-  subtitle: {
+  screenSubtitle: {
+    color: 'rgba(255,255,255,0.75)',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
+    lineHeight: 20,
   },
-  searchButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0,
+  refreshBtn: {
     alignSelf: 'flex-start',
-    marginTop: 20,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 16,
-  },
-  categoriesScroll: {
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
-  },
-  catArrows: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '50%',
-    marginTop: -14,
-    height: 0,
-  },
-  catArrowBtn: {
-    position: 'absolute',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  categoryButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    marginRight: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    minWidth: 80,
-  },
-  categoryIcon: {
-    fontSize: 20,
-    marginBottom: 6,
-  },
-  categoryName: {
+  refreshText: {
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
-    color: 'white',
   },
-  categoryNameSelected: {
-    color: 'white',
+  categories: {
+    gap: 12,
+    paddingVertical: 12,
+    paddingRight: 20,
   },
-  featuredGrid: {
-    gap: 16,
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
   },
-  videosGrid: {
-    gap: 16,
+  categoryText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
-  videoCard: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  sectionAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  sectionActionText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  loadingBox: {
+    padding: 16,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    color: 'rgba(255,255,255,0.8)',
+  },
+  emptyText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  featuredCard: {
+    backgroundColor: 'rgba(15,23,42,0.3)',
+    borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   thumbnailContainer: {
     position: 'relative',
@@ -509,62 +479,138 @@ const styles = StyleSheet.create({
   thumbnail: {
     width: '100%',
     height: 180,
-    resizeMode: 'cover',
   },
   durationBadge: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    paddingHorizontal: 8,
+    bottom: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 999,
   },
   durationText: {
-    color: 'white',
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
   },
   watchedBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 12,
+    top: 10,
+    right: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
     padding: 2,
   },
   videoInfo: {
     padding: 16,
+    gap: 8,
   },
   videoTitle: {
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
-    marginBottom: 8,
-    lineHeight: 22,
+    fontWeight: '700',
   },
   channelName: {
-    fontSize: 14,
     color: 'rgba(255,255,255,0.7)',
-    marginBottom: 8,
+    fontSize: 13,
   },
   videoStats: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   viewsText: {
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
+    fontWeight: '600',
   },
-  ratingContainer: {
+  tagButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
-  ratingText: {
+  tagButtonText: {
+    color: '#FFFFFF',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '700',
+  },
+  subjectSection: {
+    gap: 12,
+  },
+  sectionTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  sectionTagText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+  },
+  subjectGrid: {
+    gap: 12,
+  },
+  subjectCard: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  subjectHeader: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  subjectIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  subjectName: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  subjectMeta: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+  },
+  subjectDescription: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
+    marginBottom: 14,
+  },
+  subjectActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(79,70,229,0.6)',
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
     fontWeight: '600',
   },
   channelsList: {
@@ -573,58 +619,86 @@ const styles = StyleSheet.create({
   channelCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   channelAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   channelInfo: {
     flex: 1,
   },
-  channelSubject: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    marginBottom: 4,
+  channelNameText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
   channelStats: {
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
   },
   subscribeButton: {
     backgroundColor: '#EF4444',
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
   },
   subscribeText: {
-    color: 'white',
+    color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   tipsCard: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 20,
     padding: 20,
+    gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  tipsTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   tipItem: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 12,
-    marginBottom: 16,
+    alignItems: 'center',
   },
   tipText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
     flex: 1,
-    lineHeight: 20,
+  },
+  errorText: {
+    color: '#FECACA',
+    fontSize: 13,
+  },
+  emptyStateBox: {
+    padding: 20,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    gap: 6,
+  },
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  emptySubtitle: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 13,
+    lineHeight: 18,
   },
 });
