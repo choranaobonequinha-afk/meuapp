@@ -11,6 +11,8 @@ import {
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
+import WebWebView from 'react-native-web-webview';
+import WebView from 'react-native-webview';
 import { useThemeColors, useThemeStore } from '../../../../store/themeStore';
 import { LEGAL_NOTICE } from '../../../../lib/legal';
 import { supabase } from '../../../../lib/supabase';
@@ -35,9 +37,7 @@ export default function RecursoViewer() {
   const [error, setError] = useState<string | null>(null);
 
   const isWeb = Platform.OS === 'web';
-  const WebViewComponent: any = isWeb
-    ? require('react-native-web-webview').default
-    : require('react-native-webview').default;
+  const WebViewComponent: any = isWeb ? WebWebView : WebView;
 
   useEffect(() => {
     const fetchResource = async () => {

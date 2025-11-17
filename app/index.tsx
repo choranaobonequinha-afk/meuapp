@@ -1,5 +1,19 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, Easing, Image, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Dimensions,
+  Easing,
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextStyle,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -31,10 +45,33 @@ const onboardingData = [
   },
 ];
 
-const HIGHLIGHT_CHIPS = [
-  { icon: 'flash-outline' as const, text: 'Revisoes rapidas' },
-  { icon: 'chatbubble-ellipses-outline' as const, text: 'Mentoria online' },
-];
+const isWeb = Platform.OS === 'web';
+const hexagonShadow: ViewStyle = isWeb
+  ? ({ boxShadow: '0 20px 45px rgba(15,23,42,0.2)' } as ViewStyle)
+  : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
+    };
+const loginButtonShadow: ViewStyle = isWeb
+  ? ({ boxShadow: '0 12px 30px rgba(17,24,39,0.2)' } as ViewStyle)
+  : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+    };
+const logoTextShadow: TextStyle = isWeb
+  ? ({ textShadow: '1px 1px 2px rgba(0,0,0,0.1)' } as TextStyle)
+  : {
+      textShadowColor: 'rgba(0, 0, 0, 0.1)',
+      textShadowOffset: { width: 1, height: 1 },
+      textShadowRadius: 2,
+    };
+const webPointerEventsNone = isWeb ? ({ pointerEvents: 'none' } as ViewStyle) : null;
 
 
 export default function OnboardingScreen() {
@@ -103,9 +140,7 @@ export default function OnboardingScreen() {
         useNativeDriver: true,
       }),
     ]).start(() => setShowSplash(false));
-  }, []);
-
-  const currentSlide = onboardingData[currentIndex];
+  }, [logoOpacity, logoScale, overlayOpacity, titleOpacity, titleTranslate]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -113,10 +148,10 @@ export default function OnboardingScreen() {
         <Animated.View style={[styles.splashOverlay, { opacity: overlayOpacity }]}>
           <Animated.Image
             source={require('../assets/images/splash-logo.png')}
+            resizeMode='contain'
             style={{
               width: SPLASH_LOGO_SIZE,
               height: SPLASH_LOGO_SIZE,
-              resizeMode: 'contain',
               opacity: logoOpacity,
               transform: [{ scale: logoScale }, { translateX: SPLASH_LOGO_X_NUDGE }],
             }}
@@ -135,7 +170,10 @@ export default function OnboardingScreen() {
         {/* Top Section - Logo */}
         <View style={styles.topSection}>
           {/* Decorative dots moved to background layer */}
-          <View pointerEvents="none" style={styles.decorationLayer}>
+          <View
+            pointerEvents={!isWeb ? 'none' : undefined}
+            style={[styles.decorationLayer, webPointerEventsNone]}
+          >
             <View style={[styles.decorationDot, { top: 100, left: 50 }]} />
             <View style={[styles.decorationDot, { top: 150, right: 60 }]} />
             <View style={[styles.decorationDot, { top: 200, left: 80 }]} />
@@ -147,7 +185,8 @@ export default function OnboardingScreen() {
           <View style={styles.logoContainer}>
             <Image
               source={require('../assets/images/hero-logo.png')}
-              style={{ width: HERO_LOGO_SIZE, height: HERO_LOGO_SIZE, resizeMode: 'contain' }}
+              resizeMode='contain'
+              style={{ width: HERO_LOGO_SIZE, height: HERO_LOGO_SIZE }}
             />
           </View>
           <Text style={[styles.appTitle, { color: theme.text }]}>APRENDER +</Text>
@@ -271,22 +310,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     transform: [{ rotate: '30deg' }],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
     borderWidth: 2,
     borderColor: '#1976D2',
+    ...hexagonShadow,
   },
   logoText: {
     fontSize: 36,
     fontWeight: 'bold',
     color: '#1976D2',
     transform: [{ rotate: '-30deg' }],
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    ...logoTextShadow,
   },
   appTitle: {
     fontSize: 36,
@@ -456,11 +489,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+    ...loginButtonShadow,
   },
   loginButtonText: {
     fontSize: 16,

@@ -71,6 +71,7 @@ export default function PerfilScreen() {
             <View style={styles.logoContainer}>
               <Image
                 source={require('../../assets/images/hero-logo.png')}
+                resizeMode='contain'
                 style={styles.heroLogo}
               />
             </View>
@@ -259,7 +260,6 @@ const styles = StyleSheet.create({
   heroLogo: {
     width: 46,
     height: 46,
-    resizeMode: 'contain',
   },
   title: {
     fontSize: 20,

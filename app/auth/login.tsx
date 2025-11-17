@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, useRouter } from 'expo-router';
@@ -24,6 +25,25 @@ import { useThemeColors } from '../../store/themeStore';
 import { useGoogleSignIn } from '../../hooks/useGoogleSignIn';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isWeb = Platform.OS === 'web';
+const heroSurfaceShadow: ViewStyle = isWeb
+  ? ({ boxShadow: '0 30px 60px rgba(15,23,42,0.25)' } as ViewStyle)
+  : {
+      shadowColor: '#0F172A',
+      shadowOpacity: 0.18,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 14 },
+      elevation: 10,
+    };
+const formCardShadow: ViewStyle = isWeb
+  ? ({ boxShadow: '0 20px 48px rgba(15,23,42,0.25)' } as ViewStyle)
+  : {
+      shadowColor: '#0F172A',
+      shadowOpacity: 0.25,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 12 },
+      elevation: 14,
+    };
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -146,6 +166,7 @@ export default function LoginScreen() {
               <View style={styles.heroCircle}>
                 <Image
                   source={require('../../assets/images/hero-logo.png')}
+                  resizeMode='contain'
                   style={styles.heroImage}
                 />
               </View>
@@ -340,16 +361,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.95)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.18,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 10,
+    ...heroSurfaceShadow,
   },
   heroImage: {
     width: 82,
     height: 82,
-    resizeMode: 'contain',
   },
   heroTitle: {
     color: '#FFFFFF',
@@ -368,11 +384,7 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 20,
     backgroundColor: 'rgba(255,255,255,0.97)',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.25,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 14,
+    ...formCardShadow,
   },
   cardHeader: {
     gap: 4,

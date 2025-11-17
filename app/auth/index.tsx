@@ -1,11 +1,14 @@
-﻿import React from 'react';
-import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Image, Dimensions, Platform, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../../components/ui/Button';
 import { Link, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemeColors } from '../../store/themeStore';
 import { Ionicons } from '@expo/vector-icons';
+
+const isWeb = Platform.OS === 'web';
+const webPointerBlock = isWeb ? ({ pointerEvents: 'none' } as ViewStyle) : null;
 
 const { height } = Dimensions.get('window');
 
@@ -21,7 +24,10 @@ export default function Onboarding() {
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <LinearGradient colors={theme.gradient} style={styles.gradient}>
-        <View pointerEvents="none" style={styles.blobs}>
+        <View
+          pointerEvents={!isWeb ? 'none' : undefined}
+          style={[styles.blobs, webPointerBlock]}
+        >
           <LinearGradient colors={['rgba(255,255,255,0.65)', 'transparent']} style={[styles.blob, styles.blobOne]} />
           <LinearGradient colors={['rgba(124,58,237,0.35)', 'transparent']} style={[styles.blob, styles.blobTwo]} />
         </View>

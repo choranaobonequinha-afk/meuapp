@@ -113,7 +113,7 @@ export default function TrilhaScreen() {
                 <Text style={styles.sectionTitle}>Recursos oficiais</Text>
                 {resources.length === 0 ? (
                   <Text style={styles.emptySubtitle}>
-                    Cadastre items com kind = 'resource' na tabela study_track_items para aparecerem aqui.
+                    Cadastre items com kind = &apos;resource&apos; na tabela study_track_items para aparecerem aqui.
                   </Text>
                 ) : (
                   resources.map((resource) => (

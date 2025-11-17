@@ -58,11 +58,20 @@ export function useStudyTracks() {
   }, [state.tracks]);
 
   const resources = useMemo(() => {
-    const allResources: StudyTrackItem[] = [];
+    const allResources: Array<
+      StudyTrackItem & { trackTitle: string; trackSlug: string; trackColor: string }
+    > = [];
     state.tracks.forEach((track) => {
       track.items
         .filter((item) => item.kind === 'resource')
-        .forEach((item) => allResources.push(item));
+        .forEach((item) =>
+          allResources.push({
+            ...item,
+            trackTitle: track.title,
+            trackSlug: track.slug,
+            trackColor: track.color_hex,
+          })
+        );
     });
     return allResources;
   }, [state.tracks]);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, ViewStyle } from 'react-native';
+import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, ViewStyle, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 type Props = {
@@ -73,15 +73,22 @@ export const Button: React.FC<Props> = ({
   );
 };
 
+const isWeb = Platform.OS === 'web';
+const buttonShadow = isWeb
+  ? ({ boxShadow: '0 18px 32px rgba(79,70,229,0.35)' } as ViewStyle)
+  : ({
+      shadowColor: '#4F46E5',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
+    } as ViewStyle);
+
 const styles = StyleSheet.create({
   primaryButton: {
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    ...buttonShadow,
   },
   gradient: {
     paddingVertical: 18,

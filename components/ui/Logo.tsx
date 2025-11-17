@@ -14,7 +14,8 @@ export function Logo({ size = 80, style }: LogoProps) {
     <View style={[styles.root, style]}>
       <Image
         source={require('../../assets/images/hero-logo.png')}
-        style={{ width: size, height: size, resizeMode: 'contain' }}
+        resizeMode='contain'
+        style={{ width: size, height: size }}
       />
     </View>
   );

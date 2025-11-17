@@ -13,22 +13,24 @@ const extra = (Constants.expoConfig?.extra ??
   Constants.manifestExtra ??
   {}) as ExtraConfig;
 
-const fromProcessEnv = (key: string): string | undefined => {
-  if (typeof process !== 'undefined' && process.env) {
-    const value = process.env[key];
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return value.trim();
-    }
-  }
-  // web builds sometimes expose env via globalThis
-  if (typeof globalThis !== 'undefined' && (globalThis as any)[key]) {
-    return String((globalThis as any)[key]);
+const normalizeEnvValue = (value?: unknown): string | undefined => {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
   }
   return undefined;
 };
 
-const supabaseUrl = extra.supabaseUrl ?? fromProcessEnv('EXPO_PUBLIC_SUPABASE_URL');
-const supabaseAnon = extra.supabaseAnon ?? fromProcessEnv('EXPO_PUBLIC_SUPABASE_ANON_KEY');
+const envSupabaseUrl = normalizeEnvValue(
+  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_SUPABASE_URL) ??
+    (typeof globalThis !== 'undefined' ? (globalThis as any).EXPO_PUBLIC_SUPABASE_URL : undefined)
+);
+const envSupabaseAnon = normalizeEnvValue(
+  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_SUPABASE_ANON_KEY) ??
+    (typeof globalThis !== 'undefined' ? (globalThis as any).EXPO_PUBLIC_SUPABASE_ANON_KEY : undefined)
+);
+
+const supabaseUrl = extra.supabaseUrl ?? envSupabaseUrl;
+const supabaseAnon = extra.supabaseAnon ?? envSupabaseAnon;
 
 if (!supabaseUrl || !supabaseAnon) {
   throw new Error('Supabase credentials are missing. Check EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.');

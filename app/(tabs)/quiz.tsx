@@ -190,7 +190,7 @@ export default function QuizScreen() {
             </View>
             {resourcesPreview.length === 0 ? (
               <Text style={styles.emptyText}>
-                Adicione itens kind = 'resource' na tabela study_track_items para exibir aqui.
+                Adicione itens kind = &apos;resource&apos; na tabela study_track_items para exibir aqui.
               </Text>
             ) : (
               resourcesPreview.map((item) => (

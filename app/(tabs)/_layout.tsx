@@ -1,8 +1,38 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Tabs, Link } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import { Platform, View, StyleSheet, TouchableOpacity, Pressable, Animated, Easing, Text } from 'react-native';
+import {
+  Platform,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Pressable,
+  Animated,
+  Easing,
+  Text,
+  BackHandler,
+  ViewStyle,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
+const isWeb = Platform.OS === 'web';
+const tabBarShadow: ViewStyle = isWeb
+  ? ({ boxShadow: '0 20px 45px rgba(15,23,42,0.2)' } as ViewStyle)
+  : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.25,
+      shadowRadius: 20,
+      elevation: 10,
+    };
+const popoverShadow: ViewStyle = isWeb
+  ? ({ boxShadow: '0 20px 50px rgba(15,23,42,0.35)' } as ViewStyle)
+  : {
+      shadowColor: '#000',
+      shadowOpacity: 0.25,
+      shadowRadius: 20,
+      elevation: 50,
+    };
 
 export default function TabLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
@@ -12,7 +42,7 @@ export default function TabLayout() {
   const moreScale = useRef(new Animated.Value(1)).current;
   const moreRotate = useRef(new Animated.Value(0)).current; // 0->fechado, 1->aberto
 
-  const openMore = () => {
+  const openMore = useCallback(() => {
     setMoreOpen(true);
     Animated.parallel([
       Animated.timing(overlayOpacity, { toValue: 1, duration: 150, useNativeDriver: true, easing: Easing.out(Easing.quad) }),
@@ -23,9 +53,9 @@ export default function TabLayout() {
     ]).start(() => {
       Animated.spring(moreScale, { toValue: 1, useNativeDriver: true, friction: 6, tension: 120 }).start();
     });
-  };
+  }, [overlayOpacity, popoverTranslate, popoverOpacity, moreScale, moreRotate]);
 
-  const closeMore = () => {
+  const closeMore = useCallback(() => {
     Animated.parallel([
       Animated.timing(overlayOpacity, { toValue: 0, duration: 150, useNativeDriver: true, easing: Easing.in(Easing.quad) }),
       Animated.timing(popoverOpacity, { toValue: 0, duration: 120, useNativeDriver: true, easing: Easing.in(Easing.quad) }),
@@ -35,7 +65,18 @@ export default function TabLayout() {
       setMoreOpen(false);
       moreScale.setValue(1);
     });
-  };
+  }, [overlayOpacity, popoverOpacity, popoverTranslate, moreRotate, moreScale]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (moreOpen) {
+        closeMore();
+        return true;
+      }
+      return false;
+    });
+    return () => subscription.remove();
+  }, [closeMore, moreOpen]);
 
   return (
     <>
@@ -51,11 +92,7 @@ export default function TabLayout() {
             backgroundColor: 'rgba(255, 255, 255, 0.95)',
             borderRadius: 35,
             borderTopWidth: 0,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: 0.25,
-            shadowRadius: 20,
-            elevation: 10,
+            ...tabBarShadow,
           },
           tabBarItemStyle: { paddingVertical: 6 },
           tabBarBackground: () =>
@@ -259,11 +296,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 50,
     zIndex: 1000,
+    ...popoverShadow,
   },
   sheetTitle: {
     fontSize: 16,

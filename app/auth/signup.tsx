@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '../../store/themeStore';
@@ -33,6 +34,17 @@ const BENEFIT_TAGS = [
   { icon: 'flash-outline' as const, label: 'Planos personalizados' },
   { icon: 'chatbubble-ellipses-outline' as const, label: 'Comunidade ativa' },
 ];
+
+const isWeb = Platform.OS === 'web';
+const heroCircleShadow: ViewStyle = isWeb
+  ? ({ boxShadow: '0 28px 55px rgba(10,74,163,0.25)' } as ViewStyle)
+  : {
+      shadowColor: '#0A4AA3',
+      shadowOpacity: 0.25,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 12 },
+      elevation: 12,
+    };
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -230,7 +242,11 @@ export default function SignUpScreen() {
               <View style={styles.heroSection}>
                 <View style={styles.heroLogoStack}>
                   <View style={styles.heroCircle}>
-                    <Image source={require('../../assets/images/hero-logo.png')} style={styles.heroLogo} />
+                    <Image
+                      source={require('../../assets/images/hero-logo.png')}
+                      resizeMode='contain'
+                      style={styles.heroLogo}
+                    />
                   </View>
                 </View>
                 <Text style={styles.heroEyebrow}>Comunidade MeuApp</Text>
@@ -330,16 +346,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0A4AA3',
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 12,
+    ...heroCircleShadow,
   },
   heroLogo: {
     width: 70,
     height: 70,
-    resizeMode: 'contain',
   },
   heroEyebrow: {
     color: 'rgba(255,255,255,0.75)',

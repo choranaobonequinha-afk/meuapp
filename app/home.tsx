@@ -1,11 +1,50 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Platform,
+  ViewStyle,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../components/ui/Button';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
+
+const isWeb = Platform.OS === 'web';
+const heroCardShadow: ViewStyle = isWeb
+  ? ({ boxShadow: '0 30px 65px rgba(15,23,42,0.18)' } as ViewStyle)
+  : {
+      shadowColor: '#0F172A',
+      shadowOpacity: 0.08,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 12 },
+      elevation: 8,
+    };
+const statCardShadow: ViewStyle = isWeb
+  ? ({ boxShadow: '0 18px 40px rgba(15,23,42,0.12)' } as ViewStyle)
+  : {
+      shadowColor: '#0F172A',
+      shadowOpacity: 0.05,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 4,
+    };
+const listCardShadow: ViewStyle = isWeb
+  ? ({ boxShadow: '0 12px 28px rgba(15,23,42,0.1)' } as ViewStyle)
+  : {
+      shadowColor: '#0F172A',
+      shadowOpacity: 0.04,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 2,
+    };
 
 type ProfileRow = {
   id: string;
@@ -140,7 +179,7 @@ export default function HomeScreen() {
           {loading ? (
             <View style={styles.loader}>
               <ActivityIndicator size="large" color="#6366F1" />
-              <Text style={styles.loaderText}>Carregando dados da tabela "profiles"...</Text>
+              <Text style={styles.loaderText}>Carregando dados da tabela &quot;profiles&quot;...</Text>
             </View>
           ) : errorMessage ? (
             <View style={styles.errorBox}>
@@ -162,7 +201,9 @@ export default function HomeScreen() {
                 <View style={styles.emptyCard}>
                   <Ionicons name="search-outline" size={24} color="#9CA3AF" />
                   <Text style={styles.emptyTitle}>Sem registros</Text>
-                  <Text style={styles.emptyText}>Adicione dados na tabela "profiles" e atualize para ve-los aqui.</Text>
+                  <Text style={styles.emptyText}>
+                    Adicione dados na tabela &quot;profiles&quot; e atualize para ve-los aqui.
+                  </Text>
                 </View>
               }
             />
@@ -192,12 +233,8 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 6,
     gap: 16,
+    ...heroCardShadow,
   },
   heroBadge: {
     alignSelf: 'flex-start',
@@ -239,6 +276,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     gap: 4,
+    ...statCardShadow,
   },
   statLabel: {
     fontSize: 13,
@@ -288,11 +326,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: 'rgba(148,163,184,0.2)',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
+    ...statCardShadow,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -338,12 +372,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#EDF2F7',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
     gap: 10,
+    ...listCardShadow,
   },
   cardHeader: {
     flexDirection: 'row',

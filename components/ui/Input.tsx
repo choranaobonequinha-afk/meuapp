@@ -72,6 +72,21 @@ export const Input: React.FC<Props> = ({
   );
 };
 
+const isWeb = Platform.OS === 'web';
+const inputShadow = isWeb
+  ? ({ boxShadow: '0 10px 24px rgba(15,23,42,0.12)' } as ViewStyle)
+  : ({
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    } as ViewStyle);
+
+const focusedShadow = isWeb
+  ? ({ boxShadow: '0 14px 30px rgba(15,23,42,0.18)' } as ViewStyle)
+  : ({ shadowOpacity: 0.12, shadowRadius: 5, elevation: 4 } as ViewStyle);
+
 const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
@@ -93,20 +108,14 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     paddingRight: 16,
     minHeight: 56,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
     position: 'relative',
+    ...inputShadow,
   },
   inputContainerFocused: {
     // Mantém igual ao estado normal para não aparecer "caixa" de foco
     borderColor: 'rgba(255,255,255,0.3)',
     backgroundColor: 'rgba(255,255,255,0.95)',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...focusedShadow,
   },
   inputContainerError: {
     borderColor: '#F87171',

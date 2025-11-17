@@ -1,11 +1,22 @@
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, View, Platform, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '../../components/ui/Button';
 import { useGoogleSignIn } from '../../hooks/useGoogleSignIn';
 import { useThemeColors } from '../../store/themeStore';
+
+const isWeb = Platform.OS === 'web';
+const cardShadow: ViewStyle = isWeb
+  ? ({ boxShadow: '0 18px 40px rgba(15,23,42,0.15)' } as ViewStyle)
+  : {
+      shadowColor: '#0F172A',
+      shadowOpacity: 0.15,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 10,
+    };
 
 export default function GoogleLoginScreen() {
   const theme = useThemeColors();
@@ -52,11 +63,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 24,
     gap: 16,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
+    ...cardShadow,
   },
   headerRow: {
     flexDirection: 'row',
@@ -83,4 +90,3 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
 });
-
