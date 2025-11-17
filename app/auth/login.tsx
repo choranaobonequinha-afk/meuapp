@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
@@ -176,17 +177,15 @@ export default function LoginScreen() {
               </Text>
             </View>
             <LinearGradient
-              colors={['rgba(255,255,255,0.45)', 'rgba(255,255,255,0.05)']}
+              colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.6)']}
               style={styles.cardOuter}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <BlurView intensity={45} tint="light" style={styles.card}>
-                <View style={styles.badgeRow}>
-                  <View style={[styles.badge, styles.badgeSecondary]}>
-                    <Ionicons name="shield-checkmark-outline" size={16} color="#0EA5E9" />
-                    <Text style={styles.badgeText}>Login seguro</Text>
-                  </View>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardTitle}>Fazer login</Text>
+                  <Text style={styles.cardSubtitle}>Entre com seus dados ou utilize o Google.</Text>
                 </View>
 
                 <Input
@@ -278,28 +277,36 @@ export default function LoginScreen() {
                 Depois de criar uma conta, confirme o cadastro pelo link enviado ao seu email antes de tentar entrar.
               </Text>
 
-                <View style={styles.linksRow}>
-                  <Link href="/auth/forgot-password" style={styles.linkText}>
-                    Esqueci minha senha
-                  </Link>
-                  <Text style={styles.dot}>•</Text>
-                  <Link href="/auth/signup" style={styles.linkText}>
-                    Criar conta
-                  </Link>
-                </View>
+              <View style={styles.linksRow}>
+                <Link href="/auth/forgot-password" style={styles.linkText}>
+                  Esqueci minha senha
+                </Link>
+                <Text style={styles.dot}>•</Text>
+                <Link href="/auth/signup" style={styles.linkText}>
+                  Criar conta
+                </Link>
+              </View>
 
-                {googleAvailable ? (
-                  <View style={styles.oauthBlock}>
-                    <Text style={styles.oauthLabel}>Ou continue com</Text>
-                    <Button
-                      title="Entrar com Google"
-                      onPress={signInWithGoogle}
-                      loading={oauthLoading}
-                      variant="ghost"
-                      disabled={!googleAvailable}
-                    />
-                  </View>
-                ) : null}
+              {googleAvailable ? (
+                <View style={styles.oauthBlock}>
+                  <Text style={styles.oauthLabel}>Ou continue com</Text>
+                  <TouchableOpacity
+                    style={[styles.googleButton, oauthLoading && styles.googleButtonDisabled]}
+                    onPress={signInWithGoogle}
+                    disabled={oauthLoading || !googleAvailable}
+                    activeOpacity={0.85}
+                  >
+                    {oauthLoading ? (
+                      <ActivityIndicator size="small" color="#111827" />
+                    ) : (
+                      <Ionicons name="logo-google" size={20} color="#111827" />
+                    )}
+                    <Text style={styles.googleButtonText}>
+                      {oauthLoading ? 'Conectando...' : 'Entrar com Google'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
               </BlurView>
             </LinearGradient>
           </ScrollView>
@@ -419,30 +426,19 @@ const styles = StyleSheet.create({
     borderRadius: 27,
     padding: 24,
     gap: 20,
-    backgroundColor: 'rgba(255,255,255,0.75)',
+    backgroundColor: 'rgba(255,255,255,0.92)',
   },
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+  cardHeader: {
+    gap: 4,
   },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    backgroundColor: 'rgba(255,255,255,0.8)',
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
   },
-  badgeSecondary: {
-    backgroundColor: 'rgba(14,165,233,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(14,165,233,0.35)',
-  },
-  badgeText: {
+  cardSubtitle: {
     fontSize: 13,
-    color: '#1E293B',
+    color: '#6B7280',
   },
   inputSpacing: {
     marginBottom: 12,
@@ -502,5 +498,24 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: '#1E3A8A',
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  googleButtonDisabled: {
+    opacity: 0.6,
+  },
+  googleButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
   },
 });

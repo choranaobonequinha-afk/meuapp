@@ -130,37 +130,6 @@ export default function SignUpScreen() {
             contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }]}
           >
             <View style={styles.formWrapper}>
-              <View style={styles.heroSection}>
-                <View style={styles.heroLogoStack}>
-                  <View style={styles.heroCircle}>
-                    <Image source={require('../../assets/images/hero-logo.png')} style={styles.heroLogo} />
-                  </View>
-                </View>
-                <Text style={styles.heroEyebrow}>Comunidade MeuApp</Text>
-                <Text style={styles.heroHeading}>Comece sua jornada com conteudos premium e mentorias ao vivo</Text>
-                <Text style={styles.heroSubtitle}>
-                  Mais de 20 mil estudantes ja melhoraram a rotina de estudos com os planos personalizados do MeuApp.
-                </Text>
-
-                <View style={styles.statsRow}>
-                  {HERO_STATS.map((stat) => (
-                    <View key={stat.label} style={styles.statCard}>
-                      <Text style={styles.statValue}>{stat.value}</Text>
-                      <Text style={styles.statLabel}>{stat.label}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                <View style={styles.badgesRow}>
-                  {BENEFIT_TAGS.map((item) => (
-                    <View key={item.label} style={styles.badgePill}>
-                      <Ionicons name={item.icon} size={16} color="#FFFFFF" />
-                      <Text style={styles.badgePillText}>{item.label}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-
               <View style={styles.cardOuter}>
                 <LinearGradient colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.72)']} style={styles.cardGradient}>
                   <View style={styles.cardContent}>
@@ -257,6 +226,37 @@ export default function SignUpScreen() {
                   </View>
                 </LinearGradient>
               </View>
+
+              <View style={styles.heroSection}>
+                <View style={styles.heroLogoStack}>
+                  <View style={styles.heroCircle}>
+                    <Image source={require('../../assets/images/hero-logo.png')} style={styles.heroLogo} />
+                  </View>
+                </View>
+                <Text style={styles.heroEyebrow}>Comunidade MeuApp</Text>
+                <Text style={styles.heroHeading}>Comece sua jornada com conteudos premium e mentorias ao vivo</Text>
+                <Text style={styles.heroSubtitle}>
+                  Mais de 20 mil estudantes ja melhoraram a rotina de estudos com os planos personalizados do MeuApp.
+                </Text>
+
+                <View style={styles.statsRow}>
+                  {HERO_STATS.map((stat) => (
+                    <View key={stat.label} style={styles.statCard}>
+                      <Text style={styles.statValue}>{stat.value}</Text>
+                      <Text style={styles.statLabel}>{stat.label}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.badgesRow}>
+                  {BENEFIT_TAGS.map((item) => (
+                    <View key={item.label} style={styles.badgePill}>
+                      <Ionicons name={item.icon} size={16} color="#FFFFFF" />
+                      <Text style={styles.badgePillText}>{item.label}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -280,6 +280,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
+    marginBottom: 12,
   },
   backButton: {
     width: 42,
@@ -313,9 +314,8 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 28,
     padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'transparent',
+    marginTop: 24,
   },
   heroLogoStack: {
     alignItems: 'center',

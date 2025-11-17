@@ -9,6 +9,7 @@ import { useThemeStore, themes } from '../store/themeStore';
 export default function RootLayout() {
   const { user, loading, initialize } = useAuthStore();
   const theme = useThemeStore((s) => s.theme);
+  const unauthScreens = ['index', 'onboarding', 'auth'];
 
   useEffect(() => {
     initialize();
@@ -29,15 +30,9 @@ export default function RootLayout() {
     <>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }}>
-        {!user ? (
-          <>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="onboarding" />
-            <Stack.Screen name="auth" />
-          </>
-        ) : (
-          <Stack.Screen name="(tabs)" />
-        )}
+        {(user ? ['(tabs)'] : unauthScreens).map((name) => (
+          <Stack.Screen name={name} key={name} />
+        ))}
       </Stack>
     </>
   );
