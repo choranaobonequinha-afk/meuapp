@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { StudyTrack, StudyTrackItem } from '../types/database';
+import { OFFICIAL_RESOURCES } from '../data/officialResources';
 
 export type StudyTrackWithItems = StudyTrack & {
   items: StudyTrackItem[];
@@ -17,6 +18,40 @@ const initialState: TrackState = {
   error: null,
   tracks: [],
 };
+
+const FALLBACK_TRACKS: StudyTrackWithItems[] = (() => {
+  const map = new Map<string, StudyTrackWithItems>();
+  OFFICIAL_RESOURCES.forEach((resource) => {
+    const trackId = `offline-${resource.trackSlug}`;
+    if (!map.has(trackId)) {
+      map.set(trackId, {
+        id: trackId,
+        slug: resource.trackSlug,
+        title: resource.trackTitle,
+        description: resource.trackDescription,
+        exam: resource.exam,
+        color_hex: resource.trackColor,
+        cover_url: null,
+        created_at: new Date().toISOString(),
+        items: [],
+      });
+    }
+    const track = map.get(trackId)!;
+    track.items.push({
+      id: resource.id,
+      track_id: trackId,
+      lesson_id: null,
+      order_index: track.items.length,
+      kind: 'resource',
+      title: resource.title,
+      description: resource.description,
+      resource_url: resource.url,
+      estimated_minutes: resource.minutes,
+      created_at: new Date().toISOString(),
+    } as StudyTrackItem);
+  });
+  return Array.from(map.values());
+})();
 
 export function useStudyTracks() {
   const [state, setState] = useState<TrackState>(initialState);
@@ -51,17 +86,19 @@ export function useStudyTracks() {
     fetchTracks();
   }, []);
 
+  const effectiveTracks = state.tracks.length > 0 ? state.tracks : FALLBACK_TRACKS;
+
   const trackMap = useMemo(() => {
     const map = new Map<string, StudyTrackWithItems>();
-    state.tracks.forEach((track) => map.set(track.slug, track));
+    effectiveTracks.forEach((track) => map.set(track.slug, track));
     return map;
-  }, [state.tracks]);
+  }, [effectiveTracks]);
 
   const resources = useMemo(() => {
     const allResources: Array<
       StudyTrackItem & { trackTitle: string; trackSlug: string; trackColor: string }
     > = [];
-    state.tracks.forEach((track) => {
+    effectiveTracks.forEach((track) => {
       track.items
         .filter((item) => item.kind === 'resource')
         .forEach((item) =>
@@ -74,10 +111,11 @@ export function useStudyTracks() {
         );
     });
     return allResources;
-  }, [state.tracks]);
+  }, [effectiveTracks]);
 
   return {
     ...state,
+    tracks: effectiveTracks,
     trackMap,
     resources,
     getTrackBySlug: (slug?: string | null) => (slug ? trackMap.get(slug) : undefined),

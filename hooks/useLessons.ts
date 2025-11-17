@@ -117,20 +117,42 @@ export function useLessons() {
       const lesson = state.lessons.find((item) => item.id === lessonId);
       const current = lesson?.progress;
 
-      if (current?.status === 'done') {
-        await supabase.from('lesson_progress').delete().eq('id', current.id);
-      } else {
-        await supabase.from('lesson_progress').upsert({
-          lesson_id: lessonId,
-          user_id: user.id,
-          percent_complete: 100,
-          status: 'done',
-          completed_at: new Date().toISOString(),
-        });
+      try {
+        if (current?.status === 'done') {
+          await supabase.from('lesson_progress').delete().eq('id', current.id);
+          setState((prev) => ({
+            ...prev,
+            lessons: prev.lessons.map((entry) =>
+              entry.id === lessonId ? { ...entry, progress: undefined } : entry
+            ),
+          }));
+        } else {
+          const { data, error } = await supabase
+            .from('lesson_progress')
+            .upsert({
+              lesson_id: lessonId,
+              user_id: user.id,
+              percent_complete: 100,
+              status: 'done',
+              completed_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+          if (error) throw error;
+
+          setState((prev) => ({
+            ...prev,
+            lessons: prev.lessons.map((entry) =>
+              entry.id === lessonId ? { ...entry, progress: data as LessonProgress } : entry
+            ),
+          }));
+        }
+      } catch (error) {
+        console.error('toggleLessonCompletion', error);
+        fetchLessons();
       }
-      fetchLessons();
     },
-    [user?.id, state.lessons, fetchLessons]
+    [user?.id, state.lessons]
   );
 
   return {

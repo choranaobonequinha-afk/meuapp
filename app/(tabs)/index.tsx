@@ -118,7 +118,11 @@ export default function DashboardScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.headerLeft}
+            activeOpacity={0.85}
+            onPress={() => router.push('/(tabs)/perfil')}
+          >
             <View style={styles.logoContainer}>
               <Image
                 source={require('../../assets/images/hero-logo.png')}
@@ -130,7 +134,7 @@ export default function DashboardScreen() {
               <Text style={styles.greeting}>Ola, {user?.user_metadata?.name || 'Estudante'}!</Text>
               <Text style={styles.subtitle}>Continue aprendendo</Text>
             </View>
-          </View>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.profileButton} onPress={handleSignOut}>
             <Ionicons name="log-out-outline" size={24} color="white" />
           </TouchableOpacity>

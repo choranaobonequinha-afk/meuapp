@@ -16,6 +16,7 @@ import WebView from 'react-native-webview';
 import { useThemeColors, useThemeStore } from '../../../../store/themeStore';
 import { LEGAL_NOTICE } from '../../../../lib/legal';
 import { supabase } from '../../../../lib/supabase';
+import { OFFICIAL_RESOURCES } from '../../../../data/officialResources';
 
 type ResourceRow = {
   id: string;
@@ -35,6 +36,7 @@ export default function RecursoViewer() {
   const [resource, setResource] = useState<ResourceRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewerError, setViewerError] = useState<string | null>(null);
 
   const isWeb = Platform.OS === 'web';
   const WebViewComponent: any = isWeb ? WebWebView : WebView;
@@ -48,12 +50,42 @@ export default function RecursoViewer() {
         .select('id, title, description, resource_url, kind, track:study_tracks(title)')
         .eq('id', id)
         .maybeSingle();
+
       if (error) {
-        setError(error.message);
-        setResource(null);
-      } else {
+        const fallback = OFFICIAL_RESOURCES.find((item) => item.id === id);
+        if (fallback) {
+          setResource({
+            id: fallback.id,
+            title: fallback.title,
+            description: fallback.description,
+            resource_url: fallback.url,
+            kind: 'resource',
+            track: { title: fallback.trackTitle },
+          });
+          setError(null);
+        } else {
+          setError(error.message);
+          setResource(null);
+        }
+      } else if (data) {
         setResource(data as ResourceRow | null);
         setError(null);
+        setViewerError(null);
+      } else {
+        const fallback = OFFICIAL_RESOURCES.find((item) => item.id === id);
+        if (fallback) {
+          setResource({
+            id: fallback.id,
+            title: fallback.title,
+            description: fallback.description,
+            resource_url: fallback.url,
+            kind: 'resource',
+            track: { title: fallback.trackTitle },
+          });
+          setError(null);
+        } else {
+          setResource(null);
+        }
       }
       setLoading(false);
     };
@@ -61,14 +93,32 @@ export default function RecursoViewer() {
     fetchResource();
   }, [id]);
 
+  const useGoogleViewer = Platform.OS === 'android' || isWeb;
   const pdfUri = useMemo(() => {
     if (!resource?.resource_url) return null;
-    if (Platform.OS === 'android' || isWeb) {
+    if (useGoogleViewer) {
       const base = 'https://drive.google.com/viewerng/viewer?embedded=true&url=';
       return `${base}${encodeURIComponent(resource.resource_url)}`;
     }
     return resource.resource_url;
-  }, [resource?.resource_url, isWeb]);
+  }, [resource?.resource_url, useGoogleViewer]);
+
+  const injectedScript = useMemo(() => {
+    if (!useGoogleViewer) return undefined;
+    return `
+      (function () {
+        const sendIfUnavailable = () => {
+          const bodyText = document.body ? document.body.innerText || '' : '';
+          if (bodyText.includes('Nenhuma visualização disponível') || bodyText.includes('No preview available')) {
+            window.ReactNativeWebView.postMessage('preview_unavailable');
+          }
+        };
+        setTimeout(sendIfUnavailable, 1200);
+        document.addEventListener('DOMContentLoaded', () => setTimeout(sendIfUnavailable, 500));
+      })();
+      true;
+    `;
+  }, [useGoogleViewer]);
 
   const openInBrowser = async () => {
     if (resource?.resource_url) {
@@ -124,18 +174,42 @@ export default function RecursoViewer() {
       </View>
 
       {resource.resource_url ? (
-        <View style={styles.viewer}>
-          <WebViewComponent
-            source={{ uri: pdfUri ?? resource.resource_url }}
-            startInLoadingState
-            renderLoading={() => (
-              <View style={styles.loadingOverlay}>
-                <ActivityIndicator color="#4F46E5" />
-              </View>
-            )}
-            onError={() => setError('Falha ao carregar o recurso (a fonte pode bloquear incorporacao).')}
-          />
-        </View>
+        viewerError ? (
+          <View style={[styles.viewer, styles.viewerFallback]}>
+            <Ionicons name="alert-circle-outline" size={24} color={theme.text} />
+            <Text style={[styles.errorText, { color: theme.text }]}>{viewerError}</Text>
+            <TouchableOpacity style={styles.linkBtn} onPress={openInBrowser}>
+              <Ionicons name="open-outline" size={16} color={theme.text} />
+              <Text style={[styles.linkBtnText, { color: theme.text }]}>Abrir no navegador</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.viewer}>
+            <WebViewComponent
+              source={{ uri: pdfUri ?? resource.resource_url }}
+              startInLoadingState
+              renderLoading={() => (
+                <View style={styles.loadingOverlay}>
+                  <ActivityIndicator color="#4F46E5" />
+                </View>
+              )}
+              onLoadStart={() => setViewerError(null)}
+              onError={() =>
+                setViewerError(
+                  'Esta fonte não permite visualização embutida. Use o botão abaixo para abrir no navegador.'
+                )
+              }
+              injectedJavaScript={injectedScript}
+              onMessage={(event) => {
+                if (event.nativeEvent.data === 'preview_unavailable') {
+                  setViewerError(
+                    'Esta fonte não permite visualização embutida. Use o botão abaixo para abrir no navegador.'
+                  );
+                }
+              }}
+            />
+          </View>
+        )
       ) : (
         <View style={styles.center}>
           <Text style={[styles.errorText, { color: theme.text }]}>
@@ -176,6 +250,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: '800' },
   headerSub: { fontSize: 12 },
   viewer: { flex: 1, marginHorizontal: 16, borderRadius: 12, overflow: 'hidden' },
+  viewerFallback: { justifyContent: 'center', alignItems: 'center', gap: 12, padding: 16 },
   loadingOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   linkBtn: {
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,26 +11,9 @@ export default function TrilhaScreen() {
   const insets = useSafeAreaInsets();
   const theme = useThemeColors();
   const router = useRouter();
-  const { tracks, loading, error } = useStudyTracks();
+  const { tracks, loading, error, resources } = useStudyTracks();
 
   const heroTrack = tracks[0];
-
-  const resources = useMemo(() => {
-    const list: { trackTitle: string; id: string; title: string; description?: string | null }[] = [];
-    tracks.forEach((track) => {
-      track.items
-        .filter((item) => item.kind === 'resource')
-        .forEach((item) => {
-          list.push({
-            id: item.id,
-            trackTitle: track.title,
-            title: item.title || 'Recurso oficial',
-            description: item.description,
-          });
-        });
-    });
-    return list;
-  }, [tracks]);
 
   return (
     <SafeAreaView style={styles.container}>
