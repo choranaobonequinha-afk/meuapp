@@ -32,7 +32,6 @@ const onboardingData = [
 ];
 
 const HIGHLIGHT_CHIPS = [
-  { icon: 'sparkles-outline' as const, text: 'Planos otimizados' },
   { icon: 'flash-outline' as const, text: 'Revisoes rapidas' },
   { icon: 'chatbubble-ellipses-outline' as const, text: 'Mentoria online' },
 ];
@@ -159,10 +158,7 @@ export default function OnboardingScreen() {
         <LinearGradient colors={theme.gradient} style={styles.gradient}>
           <View style={styles.handle} />
 
-          <ScrollView
-            contentContainerStyle={styles.bottomContent}
-            showsVerticalScrollIndicator={false}
-          >
+          <View style={styles.bottomContent}>
             <View style={styles.contentWrapper}>
               <View
                 onLayout={(e) => setPageWidth(e.nativeEvent.layout.width)}
@@ -212,14 +208,6 @@ export default function OnboardingScreen() {
                 ))}
               </View>
 
-              <View style={styles.chipRow}>
-                {HIGHLIGHT_CHIPS.map((item) => (
-                  <View key={item.text} style={styles.chip}>
-                    <Ionicons name={item.icon} size={14} color="#111827" />
-                    <Text style={styles.chipText}>{item.text}</Text>
-                  </View>
-                ))}
-              </View>
             </View>
 
             {/* Action buttons */}
@@ -234,7 +222,7 @@ export default function OnboardingScreen() {
                 <Ionicons name="chevron-forward" size={16} color="#1976D2" />
               </TouchableOpacity>
             </View>
-          </ScrollView>
+          </View>
         </LinearGradient>
       </SafeAreaView>
     </View>
@@ -345,8 +333,10 @@ const styles = StyleSheet.create({
     paddingBottom: 56,
   },
   bottomContent: {
+    flex: 1,
+    justifyContent: 'space-between',
     paddingBottom: 32,
-    gap: 32,
+    gap: 24,
   },
   contentWrapper: {
     flex: 1,
