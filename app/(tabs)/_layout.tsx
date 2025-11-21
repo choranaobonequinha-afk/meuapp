@@ -191,9 +191,17 @@ export default function TabLayout() {
         });
       });
 
-      // Remove completamente o contêiner problemático, se existir.
-      document.querySelectorAll('.r-flex-13awgt0').forEach((el) => {
-        el.parentElement?.removeChild(el);
+      // Esconde apenas o contêiner problemático de seta dentro do tablist, sem remover outros nós.
+      document.querySelectorAll('nav[role="tablist"] .r-flex-13awgt0').forEach((el) => {
+        const text = (el.textContent || '').trim();
+        if (['▼', '▾', '▿', '⏷', '⏵', '▸', '▹'].includes(text)) {
+          const element = el as HTMLElement;
+          element.style.display = 'none';
+          element.style.width = '0px';
+          element.style.height = '0px';
+          element.style.opacity = '0';
+          element.style.pointerEvents = 'none';
+        }
       });
     };
 
