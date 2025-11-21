@@ -157,6 +157,19 @@ export default function TabLayout() {
             element.style.opacity = '0';
             element.style.pointerEvents = 'none';
           }
+
+          // Se for um tab cujo texto é só seta (fallback), esconde o tab inteiro.
+          if (el.getAttribute && el.getAttribute('role') === 'tab') {
+            const tabText = (el.textContent || '').trim();
+            if (['▼', '▾', '▿', '⏷', '⏵', '▸', '▹'].includes(tabText)) {
+              const element = el as HTMLElement;
+              element.style.display = 'none';
+              element.style.width = '0px';
+              element.style.height = '0px';
+              element.style.opacity = '0';
+              element.style.pointerEvents = 'none';
+            }
+          }
         });
       });
     };
