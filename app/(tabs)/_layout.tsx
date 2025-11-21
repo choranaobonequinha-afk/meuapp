@@ -142,6 +142,21 @@ export default function TabLayout() {
         element.style.opacity = '0';
         element.style.pointerEvents = 'none';
       });
+
+      // Esconde qualquer elemento-texto com seta "▼" que ainda apareça.
+      document.querySelectorAll('nav[role="tablist"]').forEach((nav) => {
+        nav.querySelectorAll('*').forEach((el) => {
+          const text = (el.textContent || '').trim();
+          if (['▼', '▾', '▿', '⏷', '⏵', '▸', '▹'].includes(text)) {
+            const element = el as HTMLElement;
+            element.style.display = 'none';
+            element.style.width = '0px';
+            element.style.height = '0px';
+            element.style.opacity = '0';
+            element.style.pointerEvents = 'none';
+          }
+        });
+      });
     };
 
     hideDropdowns();
