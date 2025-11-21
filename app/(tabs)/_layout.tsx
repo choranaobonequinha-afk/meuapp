@@ -127,6 +127,9 @@ export default function TabLayout() {
         'nav[role="tablist"] button[aria-label*="dropdown"]',
         'nav[role="tablist"] [role="combobox"]',
         'nav[role="tablist"] [aria-haspopup="listbox"]',
+        'nav[role="tablist"] button:not([role="tab"])',
+        'nav[role="tablist"] summary',
+        'nav[role="tablist"] details',
       ];
       document.querySelectorAll(selectors.join(',')).forEach((el) => {
         const element = el as HTMLElement;
