@@ -142,7 +142,7 @@ export default function DashboardScreen() {
 
         <ScrollView
           style={styles.content}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 96 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 140 }}
           showsVerticalScrollIndicator={false}
         >
           {/* Progress Overview */}

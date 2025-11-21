@@ -19,6 +19,7 @@ export default function QuizScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const theme = useThemeColors();
+  const bottomSpace = insets.bottom + 140;
   const { questions, loading, error, exams, subjects, randomQuestion } = useQuizBank();
   const { resources } = useStudyTracks();
   const [currentQuestion, setCurrentQuestion] = useState(randomQuestion || null);
@@ -79,7 +80,12 @@ export default function QuizScreen() {
         end={{ x: 1, y: 1 }}
       >
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 40, gap: 24, paddingTop: 16 }}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: bottomSpace,
+            gap: 24,
+            paddingTop: 16,
+          }}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>

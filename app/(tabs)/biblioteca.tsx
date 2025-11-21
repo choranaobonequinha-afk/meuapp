@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ActivityIndicator,
   ScrollView,
@@ -19,6 +19,8 @@ export default function BibliotecaScreen() {
   const theme = useThemeColors();
   const router = useRouter();
   const { resources, loading, error } = useStudyTracks();
+  const { bottom } = useSafeAreaInsets();
+  const bottomSpace = bottom + 120;
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
@@ -49,7 +51,7 @@ export default function BibliotecaScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: 60, gap: 20 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: bottomSpace, gap: 20 }}
       >
         <View style={styles.header}>
           <Text style={[styles.title, { color: theme.text }]}>Biblioteca oficial</Text>

@@ -85,6 +85,7 @@ create policy "Users read lesson progress" on public.lesson_progress
 drop policy if exists "Users mutate lesson progress" on public.lesson_progress;
 create policy "Users mutate lesson progress" on public.lesson_progress
   for insert with check (auth.uid() = user_id);
+drop policy if exists "Users update lesson progress" on public.lesson_progress;
 create policy "Users update lesson progress" on public.lesson_progress
   for update using (auth.uid() = user_id);
 
@@ -95,6 +96,7 @@ create policy "Users read study stats" on public.daily_study_stats
 drop policy if exists "Users mutate study stats" on public.daily_study_stats;
 create policy "Users mutate study stats" on public.daily_study_stats
   for insert with check (auth.uid() = user_id);
+drop policy if exists "Users update study stats" on public.daily_study_stats;
 create policy "Users update study stats" on public.daily_study_stats
   for update using (auth.uid() = user_id);
 

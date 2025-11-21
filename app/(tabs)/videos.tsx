@@ -28,6 +28,7 @@ const ICON_BY_SUBJECT: Record<string, keyof typeof Ionicons.glyphMap> = {
 export default function VideosScreen() {
   const insets = useSafeAreaInsets();
   const theme = useThemeColors();
+  const bottomSpace = insets.bottom + 140;
   const {
     featuredLessons,
     lessonsBySubject,
@@ -110,7 +111,7 @@ export default function VideosScreen() {
         <ScrollView
           ref={scrollRef}
           style={styles.scroll}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 40, gap: 32 }}
+          contentContainerStyle={{ paddingBottom: bottomSpace, gap: 32 }}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>

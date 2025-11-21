@@ -1,18 +1,17 @@
 import { Recurso, Trilha } from '../types/models';
 
-// Trilhas (mock)
+// Trilhas (mock) para fallback offline
 export const trilhas: Trilha[] = [
-  // Matemática primeiro, conforme prioridade
   {
     id: 'matematica-funcoes',
-    nome: 'Matemática – Funções',
-    descricao: 'Aulas selecionadas de funções de 1º e 2º grau.',
+    nome: 'Matematica - Funcoes',
+    descricao: 'Aulas selecionadas de funcoes de 1o e 2o grau.',
     imgCoverUrl: undefined,
     areas: ['matematica'],
   },
   {
     id: 'enem-base',
-    nome: 'ENEM – Base',
+    nome: 'ENEM - Base oficial',
     descricao: 'Materiais oficiais do INEP para praticar com provas reais.',
     imgCoverUrl: undefined,
     exames: ['enem'],
@@ -20,7 +19,7 @@ export const trilhas: Trilha[] = [
   {
     id: 'vestibular-ufpr',
     nome: 'Vestibular UFPR',
-    descricao: 'Páginas e provas oficiais da UFPR para consulta.',
+    descricao: 'Paginas e provas oficiais da UFPR para consulta.',
     imgCoverUrl: undefined,
     exames: ['ufpr'],
   },
@@ -28,37 +27,30 @@ export const trilhas: Trilha[] = [
 
 // Recursos (mock)
 export const recursos: Recurso[] = [
-  // ENEM – Base → PDF oficial (INEP)
   {
-    id: 'enem-2022-caderno-azul',
+    id: 'enem-2023-caderno-azul',
     trilhaId: 'enem-base',
     tipo: 'PDF_OFICIAL',
-    titulo: 'ENEM 2022 – Caderno Azul (1º dia) – Prova Objetiva',
-    // URL oficial do INEP (exemplo público, pode ser substituído por outro oficial)
+    titulo: 'ENEM 2023 - Caderno Azul (1o dia) - Prova Objetiva',
     urlOficial:
-      'https://download.inep.gov.br/educacao_basica/enem/provas/2022/1_dia_caderno_1_azul_aplicacao_regular.pdf',
+      'https://download.inep.gov.br/educacao_basica/enem/provas/2023/1_dia_caderno_1_azul_aplicacao_regular.pdf',
     origem: 'INEP',
-    observacao: 'Link oficial público do INEP.',
+    observacao: 'Link oficial publico do INEP.',
   },
-
-  // Matemática – Funções → Vídeo YouTube (canal oficial)
   {
     id: 'video-funcoes-1-grau',
     trilhaId: 'matematica-funcoes',
     tipo: 'YOUTUBE',
-    titulo: 'Função do 1º grau – Aula completa',
-    // Exemplo de URL de vídeo do YouTube (substituível por canal/professor de escolha)
-    urlOficial: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    titulo: 'Funcao do 1o grau - Aula completa',
+    urlOficial: 'https://www.youtube.com/watch?v=XtKJzhLQpfA',
     origem: 'YouTube',
     observacao: 'Tocado via player oficial do YouTube.',
   },
-
-  // Vestibular UFPR → SITE oficial
   {
     id: 'ufpr-provas-editais',
     trilhaId: 'vestibular-ufpr',
     tipo: 'SITE',
-    titulo: 'Provas e editais – UFPR (oficial)',
+    titulo: 'Provas e editais - UFPR (oficial)',
     urlOficial: 'https://www.nc.ufpr.br/concursos_institucionais/ufpr/ufpr_provas.html',
     origem: 'UFPR',
   },
