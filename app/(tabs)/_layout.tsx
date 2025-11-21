@@ -87,6 +87,10 @@ export default function TabLayout() {
       styleEl = document.createElement('style');
       styleEl.id = styleId;
       styleEl.textContent = `
+        /* Some browsers render a fallback <select> for the tab bar; hide it globally. */
+        select {
+          display: none !important;
+        }
         nav[role="tablist"] select {
           display: none !important;
         }
@@ -106,6 +110,39 @@ export default function TabLayout() {
         styleEl.parentNode.removeChild(styleEl);
       }
     };
+  }, []);
+
+  // Em alguns navegadores o Tabs web ainda injeta um <select> ou botões de overflow.
+  // Forçamos esconder após qualquer mutação no DOM.
+  useEffect(() => {
+    if (!isWeb) return;
+
+    const hideDropdowns = () => {
+      const selectors = [
+        'nav[role="tablist"] select',
+        'nav[role="tablist"] option',
+        'nav[role="tablist"] button[aria-label*="More"]',
+        'nav[role="tablist"] button[aria-label*="more"]',
+        'nav[role="tablist"] button[aria-label*="Dropdown"]',
+        'nav[role="tablist"] button[aria-label*="dropdown"]',
+        'nav[role="tablist"] [role="combobox"]',
+        'nav[role="tablist"] [aria-haspopup="listbox"]',
+      ];
+      document.querySelectorAll(selectors.join(',')).forEach((el) => {
+        const element = el as HTMLElement;
+        element.style.display = 'none';
+        element.style.width = '0px';
+        element.style.height = '0px';
+        element.style.opacity = '0';
+        element.style.pointerEvents = 'none';
+      });
+    };
+
+    hideDropdowns();
+    const observer = new MutationObserver(hideDropdowns);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
   }, []);
 
   return (
