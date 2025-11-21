@@ -322,6 +322,7 @@ export default function TabLayout() {
         <Tabs.Screen name="perfil" options={{ href: null }} />
         <Tabs.Screen name="materias/[id]" options={{ href: null }} />
         <Tabs.Screen name="trilhas" options={{ href: null }} />
+        <Tabs.Screen name="quiz/[year]" options={{ href: null }} />
       </Tabs>
 
       {/* Popover ancorado ao tab bar (sem navegar de página) */}
