@@ -273,7 +273,7 @@ export default function QuizScreen() {
                   return (
                     <View key={year} style={{ gap: 10 }}>
                       <TouchableOpacity style={styles.yearHeader} onPress={() => toggleYear(year)}>
-                        <Text style={styles.yearTitle}>{year}</Text>
+                        <Text style={styles.yearTitle}>{`ENEM ${year}`}</Text>
                         <Ionicons
                           name={isOpen ? 'chevron-up-outline' : 'chevron-down-outline'}
                           size={18}
@@ -566,9 +566,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   dayPill: {
     flexDirection: 'row',
