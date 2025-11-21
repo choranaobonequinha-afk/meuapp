@@ -111,6 +111,20 @@ export default function QuizScreen() {
     return result;
   }, [activeResources]);
 
+  const sortedYears = useMemo(() => Object.keys(groupedByYearDay).sort((a, b) => b.localeCompare(a)), [groupedByYearDay]);
+
+  const [expandedYears, setExpandedYears] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (sortedYears.length > 0 && Object.keys(expandedYears).length === 0) {
+      setExpandedYears({ [sortedYears[0]]: true });
+    }
+  }, [sortedYears, expandedYears]);
+
+  const toggleYear = (year: string) => {
+    setExpandedYears((prev) => ({ ...prev, [year]: !prev[year] }));
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
@@ -254,49 +268,59 @@ export default function QuizScreen() {
                   Adicione recursos (kind = resource) no Supabase para o exame {selectedExam}.
                 </Text>
               ) : (
-                Object.keys(groupedByYearDay)
-                  .sort((a, b) => b.localeCompare(a))
-                  .map((year) => (
+                sortedYears.map((year) => {
+                  const isOpen = expandedYears[year];
+                  return (
                     <View key={year} style={{ gap: 10 }}>
-                      <Text style={styles.yearTitle}>{year}</Text>
-                      {Object.keys(groupedByYearDay[year])
-                        .sort()
-                        .map((day) => (
-                          <View key={day} style={{ gap: 6 }}>
-                            <View style={styles.dayPill}>
-                              <Ionicons name="calendar-outline" size={14} color="#FFFFFF" />
-                              <Text style={styles.dayText}>{day}</Text>
-                            </View>
-                            <View style={styles.resourceGrid}>
-                              {groupedByYearDay[year][day].map((item) => (
-                                <TouchableOpacity
-                                  key={item.id}
-                                  style={[styles.resourceCard, { width: cardWidth }]}
-                                  onPress={() =>
-                                    router.push({ pathname: '/(tabs)/trilhas/recurso/[id]', params: { id: item.id } })
-                                  }
-                                >
-                                  <View style={[styles.resourceBadge, { backgroundColor: `${item.trackColor}22` }]}>
-                                    <Ionicons name="document-text-outline" size={16} color={item.trackColor} />
-                                    <Text style={[styles.resourceBadgeText, { color: item.trackColor }]}>
-                                      {item.trackExam?.toUpperCase() || selectedExam}
-                                    </Text>
-                                  </View>
-                                  <Text style={styles.resourceTitle}>{item.title}</Text>
-                                  <Text style={styles.resourceSubtitle} numberOfLines={2}>
-                                    {item.description || 'PDF oficial do exame.'}
-                                  </Text>
-                                  <View style={styles.resourceMeta}>
-                                    <Ionicons name="open-outline" size={14} color="#FFFFFF" />
-                                    <Text style={styles.resourceMetaText}>Abrir PDF</Text>
-                                  </View>
-                                </TouchableOpacity>
-                              ))}
-                            </View>
-                          </View>
-                        ))}
+                      <TouchableOpacity style={styles.yearHeader} onPress={() => toggleYear(year)}>
+                        <Text style={styles.yearTitle}>{year}</Text>
+                        <Ionicons
+                          name={isOpen ? 'chevron-up-outline' : 'chevron-down-outline'}
+                          size={18}
+                          color="#FFFFFF"
+                        />
+                      </TouchableOpacity>
+                      {isOpen
+                        ? Object.keys(groupedByYearDay[year])
+                            .sort()
+                            .map((day) => (
+                              <View key={day} style={{ gap: 6 }}>
+                                <View style={styles.dayPill}>
+                                  <Ionicons name="calendar-outline" size={14} color="#FFFFFF" />
+                                  <Text style={styles.dayText}>{day}</Text>
+                                </View>
+                                <View style={styles.resourceGrid}>
+                                  {groupedByYearDay[year][day].map((item) => (
+                                    <TouchableOpacity
+                                      key={item.id}
+                                      style={[styles.resourceCard, { width: cardWidth }]}
+                                      onPress={() =>
+                                        router.push({ pathname: '/(tabs)/trilhas/recurso/[id]', params: { id: item.id } })
+                                      }
+                                    >
+                                      <View style={[styles.resourceBadge, { backgroundColor: `${item.trackColor}22` }]}>
+                                        <Ionicons name="document-text-outline" size={16} color={item.trackColor} />
+                                        <Text style={[styles.resourceBadgeText, { color: item.trackColor }]}>
+                                          {item.trackExam?.toUpperCase() || selectedExam}
+                                        </Text>
+                                      </View>
+                                      <Text style={styles.resourceTitle}>{item.title}</Text>
+                                      <Text style={styles.resourceSubtitle} numberOfLines={2}>
+                                        {item.description || 'PDF oficial do exame.'}
+                                      </Text>
+                                      <View style={styles.resourceMeta}>
+                                        <Ionicons name="open-outline" size={14} color="#FFFFFF" />
+                                        <Text style={styles.resourceMetaText}>Abrir PDF</Text>
+                                      </View>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              </View>
+                            ))
+                        : null}
                     </View>
-                  ))
+                  );
+                })
               )}
             </View>
           </View>
@@ -537,6 +561,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '800',
+  },
+  yearHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   dayPill: {
     flexDirection: 'row',
