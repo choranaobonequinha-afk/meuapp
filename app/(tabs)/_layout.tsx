@@ -93,6 +93,8 @@ export default function TabLayout() {
             borderRadius: 35,
             borderTopWidth: 0,
             overflow: 'hidden',
+            scrollbarWidth: 'none', // esconde qualquer seta/scrollbar no web
+            msOverflowStyle: 'none',
             ...tabBarShadow,
           },
           tabBarItemStyle: { paddingVertical: 6 },
