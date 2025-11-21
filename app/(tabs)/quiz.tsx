@@ -107,6 +107,20 @@ export default function QuizScreen() {
     return Array.from(set).sort((a, b) => b.localeCompare(a));
   }, [activeResources]);
 
+  const yearMeta = useMemo(() => {
+    const map = new Map<string, { color: string; count: number }>();
+    activeResources.forEach((item) => {
+      const match = /ENEM\s+(\d{4})/i.exec(item.title || '');
+      if (!match?.[1]) return;
+      const year = match[1];
+      if (!map.has(year)) map.set(year, { color: item.trackColor, count: 0 });
+      const entry = map.get(year)!;
+      entry.count += 1;
+      if (!entry.color && item.trackColor) entry.color = item.trackColor;
+    });
+    return map;
+  }, [activeResources]);
+
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
@@ -253,24 +267,33 @@ export default function QuizScreen() {
                 <Text style={styles.emptyText}>Nao encontramos provas com ano no titulo.</Text>
               ) : (
                 <View style={{ gap: 10 }}>
-                  {yearsAvailable.map((year) => (
-                    <TouchableOpacity
-                      key={year}
-                      style={styles.yearHeader}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/(tabs)/quiz/[year]',
-                          params: { year, exam: selectedExam },
-                        })
-                      }
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Ionicons name="calendar-outline" size={16} color="#FFFFFF" />
-                        <Text style={styles.yearTitle}>{`ENEM ${year}`}</Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  ))}
+                  {yearsAvailable.map((year) => {
+                    const info = yearMeta.get(year);
+                    const color = info?.color || '#FFFFFF';
+                    return (
+                      <TouchableOpacity
+                        key={year}
+                        style={[styles.yearHeader, { borderColor: `${color}33`, backgroundColor: `${color}12` }]}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/(tabs)/quiz/[year]',
+                            params: { year, exam: selectedExam },
+                          })
+                        }
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <View style={[styles.yearDot, { backgroundColor: color }]} />
+                          <View>
+                            <Text style={styles.yearTitle}>{`ENEM ${year}`}</Text>
+                            <Text style={styles.yearSubtitle}>
+                              {info?.count ? `${info.count} PDFs` : 'Provas e gabaritos'}
+                            </Text>
+                          </View>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               )}
             </View>
@@ -523,6 +546,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
     backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  yearDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  yearSubtitle: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    fontWeight: '600',
   },
   resourceBadge: {
     flexDirection: 'row',

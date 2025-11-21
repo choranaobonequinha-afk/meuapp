@@ -33,6 +33,11 @@ export default function QuizYearScreen() {
 
   const days = Object.keys(filtered).sort();
 
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/quiz');
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
@@ -41,11 +46,11 @@ export default function QuizYearScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={goBack} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={18} color={theme.text} />
             <Text style={[styles.backText, { color: theme.text }]}>Voltar</Text>
           </TouchableOpacity>
-          <View style={{ gap: 4 }}>
+          <View style={styles.headerCard}>
             <Text style={[styles.title, { color: theme.text }]}>{`ENEM ${year}`}</Text>
             <Text style={[styles.subtitle, { color: theme.textMuted }]}>
               Provas e gabaritos separados por dia e caderno.
@@ -68,7 +73,7 @@ export default function QuizYearScreen() {
                 {filtered[day].map((item) => (
                   <TouchableOpacity
                     key={item.id}
-                    style={[styles.card, { borderColor: `${item.trackColor}33` }]}
+                    style={[styles.card, { borderColor: `${item.trackColor}33`, backgroundColor: `${item.trackColor}10` }]}
                     onPress={() =>
                       router.push({ pathname: '/(tabs)/trilhas/recurso/[id]', params: { id: item.id } })
                     }
@@ -96,6 +101,14 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, gap: 16 },
   header: { gap: 10 },
+  headerCard: {
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    gap: 6,
+  },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
   backText: { fontWeight: '700' },
   title: { fontSize: 22, fontWeight: '800' },
