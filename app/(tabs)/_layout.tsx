@@ -135,6 +135,8 @@ export default function TabLayout() {
         'nav[role="tablist"] [role="button"]',
         'nav[role="tablist"] > div:last-child',
         'nav[role="tablist"] > div:last-child *',
+        'nav[role="tablist"] .r-flex-13awgt0',
+        'nav[role="tablist"] .r-flex-13awgt0 *',
       ];
       document.querySelectorAll(selectors.join(',')).forEach((el) => {
         const element = el as HTMLElement;
@@ -156,6 +158,14 @@ export default function TabLayout() {
             element.style.height = '0px';
             element.style.opacity = '0';
             element.style.pointerEvents = 'none';
+            const parent = element.parentElement;
+            if (parent) {
+              parent.style.display = 'none';
+              parent.style.width = '0px';
+              parent.style.height = '0px';
+              parent.style.opacity = '0';
+              parent.style.pointerEvents = 'none';
+            }
           }
 
           // Se for um tab cujo texto é só seta (fallback), esconde o tab inteiro.
@@ -168,6 +178,14 @@ export default function TabLayout() {
               element.style.height = '0px';
               element.style.opacity = '0';
               element.style.pointerEvents = 'none';
+              const parent = element.parentElement;
+              if (parent) {
+                parent.style.display = 'none';
+                parent.style.width = '0px';
+                parent.style.height = '0px';
+                parent.style.opacity = '0';
+                parent.style.pointerEvents = 'none';
+              }
             }
           }
         });
