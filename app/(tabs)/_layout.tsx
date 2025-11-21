@@ -130,6 +130,9 @@ export default function TabLayout() {
         'nav[role="tablist"] button:not([role="tab"])',
         'nav[role="tablist"] summary',
         'nav[role="tablist"] details',
+        'nav[role="tablist"] > *:not([role="tab"])',
+        'nav[role="tablist"] [aria-haspopup]',
+        'nav[role="tablist"] [role="button"]',
       ];
       document.querySelectorAll(selectors.join(',')).forEach((el) => {
         const element = el as HTMLElement;
