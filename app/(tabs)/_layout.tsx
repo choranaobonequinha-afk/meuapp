@@ -81,16 +81,22 @@ export default function TabLayout() {
   // Fix: no web um <select> acessível aparece como setinha; escondemos.
   useEffect(() => {
     if (!isWeb) return;
-    const selects = Array.from(document.querySelectorAll('select'));
-    const prevDisplay = new Map<HTMLElement, string>();
-    selects.forEach((el) => {
-      prevDisplay.set(el as HTMLElement, (el as HTMLElement).style.display);
-      (el as HTMLElement).style.display = 'none';
-    });
+    const styleId = 'hide-tab-select';
+    let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      styleEl.textContent = `
+        nav[role="tablist"] select {
+          display: none !important;
+        }
+      `;
+      document.head.appendChild(styleEl);
+    }
     return () => {
-      prevDisplay.forEach((display, el) => {
-        el.style.display = display;
-      });
+      if (styleEl && styleEl.parentNode) {
+        styleEl.parentNode.removeChild(styleEl);
+      }
     };
   }, []);
 
