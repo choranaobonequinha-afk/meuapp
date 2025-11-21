@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ActivityIndicator,
   Platform,
@@ -31,6 +31,10 @@ type ResourceRow = {
 };
 
 const GOOGLE_VIEWER = 'https://docs.google.com/gview?embedded=1&url=';
+const BROKEN_URLS: Record<string, string> = {
+  'https://download.inep.gov.br/educacao_basica/enem/provas/2023/1_dia_caderno_1_azul_aplicacao_regular.pdf':
+    'https://download.inep.gov.br/educacao_basica/enem/provas/2022/1_dia_caderno_1_azul_aplicacao_regular.pdf',
+};
 
 function getHost(url?: string | null) {
   if (!url) return 'link externo';
@@ -43,6 +47,7 @@ function getHost(url?: string | null) {
 
 export default function RecursoViewer() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
   const theme = useThemeColors();
   const themeName = useThemeStore((s) => s.theme);
   const [resource, setResource] = useState<ResourceRow | null>(null);
@@ -108,10 +113,11 @@ export default function RecursoViewer() {
   const useGoogleViewer = Platform.OS === 'android' || isWeb;
   const pdfUri = useMemo(() => {
     if (!resource?.resource_url) return null;
+    const fixed = BROKEN_URLS[resource.resource_url] ?? resource.resource_url;
     if (useGoogleViewer) {
-      return `${GOOGLE_VIEWER}${encodeURIComponent(resource.resource_url)}`;
+      return `${GOOGLE_VIEWER}${encodeURIComponent(fixed)}`;
     }
-    return resource.resource_url;
+    return fixed;
   }, [resource?.resource_url, useGoogleViewer]);
 
   const injectedScript = useMemo(() => {
@@ -166,7 +172,7 @@ export default function RecursoViewer() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.content, { paddingBottom: 32 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 64 }]}
         showsVerticalScrollIndicator={false}
       >
         <View
@@ -188,7 +194,7 @@ export default function RecursoViewer() {
               {resource.title || 'Recurso oficial'}
             </Text>
             <Text style={[styles.headerSub, { color: theme.textMuted }]}>
-              {resource.track?.title || 'Trilha oficial'} • {host}
+              {resource.track?.title || 'Trilha oficial'} - {host}
             </Text>
           </View>
           <TouchableOpacity style={styles.headerAction} onPress={openInBrowser}>

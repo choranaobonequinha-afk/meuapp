@@ -20,7 +20,7 @@ export default function TrilhaScreen() {
       <LinearGradient colors={theme.gradient} style={styles.container} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <ScrollView
           style={styles.container}
-          contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 48, gap: 28 }}
+          contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 140, gap: 28 }}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
