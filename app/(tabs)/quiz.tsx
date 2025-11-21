@@ -290,7 +290,9 @@ export default function QuizScreen() {
                             </Text>
                           </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+                        <View style={styles.yearBullet}>
+                          <Text style={styles.yearBulletText}>{info?.count || 1}</Text>
+                        </View>
                       </TouchableOpacity>
                     );
                   })}
@@ -556,6 +558,22 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
     fontSize: 12,
     fontWeight: '600',
+  },
+  yearBullet: {
+    minWidth: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  yearBulletText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 12,
   },
   resourceBadge: {
     flexDirection: 'row',

@@ -13,6 +13,16 @@ export default function QuizYearScreen() {
   const router = useRouter();
   const { resources } = useStudyTracks();
 
+  const COLOR_BY_LABEL: Record<string, string> = {
+    azul: '#2563EB',
+    amarelo: '#F59E0B',
+    verde: '#16A34A',
+    branco: '#E5E7EB',
+    cinza: '#9CA3AF',
+    roxo: '#8B5CF6',
+    laranja: '#F97316',
+  };
+
   const filtered = useMemo(() => {
     const result: Record<string, ReturnType<typeof useStudyTracks>['resources']> = {};
     resources.forEach((item) => {
@@ -36,6 +46,14 @@ export default function QuizYearScreen() {
   const goBack = () => {
     if (router.canGoBack()) router.back();
     else router.replace('/(tabs)/quiz');
+  };
+
+  const dayColor = (title?: string | null, fallback?: string) => {
+    if (!title) return fallback || '#4F46E5';
+    const lowered = title.toLowerCase();
+    const match = /(azul|amarelo|verde|branco|cinza|roxo|laranja)/.exec(lowered);
+    if (match?.[1]) return COLOR_BY_LABEL[match[1]] || fallback || '#4F46E5';
+    return fallback || '#4F46E5';
   };
 
   return (
@@ -65,22 +83,30 @@ export default function QuizYearScreen() {
         ) : (
           days.map((day) => (
             <View key={day} style={styles.dayBlock}>
-              <View style={styles.dayHeader}>
-                <Ionicons name="calendar-outline" size={16} color={theme.text} />
+              <View style={[styles.dayHeader, { backgroundColor: `${dayColor(day)}22`, borderColor: `${dayColor(day)}33` }]}>
+                <Ionicons name="calendar-outline" size={16} color={dayColor(day)} />
                 <Text style={[styles.dayTitle, { color: theme.text }]}>{day}</Text>
               </View>
               <View style={styles.cards}>
                 {filtered[day].map((item) => (
                   <TouchableOpacity
                     key={item.id}
-                    style={[styles.card, { borderColor: `${item.trackColor}33`, backgroundColor: `${item.trackColor}10` }]}
+                    style={[
+                      styles.card,
+                      {
+                        borderColor: `${dayColor(item.title, item.trackColor)}33`,
+                        backgroundColor: `${dayColor(item.title, item.trackColor)}10`,
+                      },
+                    ]}
                     onPress={() =>
                       router.push({ pathname: '/(tabs)/trilhas/recurso/[id]', params: { id: item.id } })
                     }
                   >
-                    <View style={[styles.badge, { backgroundColor: `${item.trackColor}22` }]}>
-                      <Ionicons name="document-text-outline" size={16} color={item.trackColor} />
-                      <Text style={[styles.badgeText, { color: item.trackColor }]}>{item.trackExam || 'ENEM'}</Text>
+                    <View style={[styles.badge, { backgroundColor: `${dayColor(item.title, item.trackColor)}22` }]}>
+                      <Ionicons name="document-text-outline" size={16} color={dayColor(item.title, item.trackColor)} />
+                      <Text style={[styles.badgeText, { color: dayColor(item.title, item.trackColor) }]}>
+                        {item.trackExam || 'ENEM'}
+                      </Text>
                     </View>
                     <Text style={styles.cardTitle}>{item.title}</Text>
                     <Text style={styles.cardSubtitle} numberOfLines={2}>
