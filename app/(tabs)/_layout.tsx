@@ -190,6 +190,11 @@ export default function TabLayout() {
           }
         });
       });
+
+      // Remove completamente o contêiner problemático, se existir.
+      document.querySelectorAll('.r-flex-13awgt0').forEach((el) => {
+        el.parentElement?.removeChild(el);
+      });
     };
 
     hideDropdowns();
