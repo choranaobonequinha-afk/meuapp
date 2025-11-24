@@ -38,9 +38,9 @@ export default function TabLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const popoverOpacity = useRef(new Animated.Value(0)).current;
-  const popoverTranslate = useRef(new Animated.Value(8)).current; // desliza de baixo pra cima
+  const popoverTranslate = useRef(new Animated.Value(8)).current;
   const moreScale = useRef(new Animated.Value(1)).current;
-  const moreRotate = useRef(new Animated.Value(0)).current; // 0->fechado, 1->aberto
+  const moreRotate = useRef(new Animated.Value(0)).current;
 
   const openMore = useCallback(() => {
     setMoreOpen(true);
@@ -78,7 +78,7 @@ export default function TabLayout() {
     return () => subscription.remove();
   }, [closeMore, moreOpen]);
 
-  // Fix: no web um <select> acessível aparece como setinha; escondemos.
+  // Web only: hide any fallback select/overflow rendered by the tablist
   useEffect(() => {
     if (!isWeb) return;
     const styleId = 'hide-tab-select';
@@ -87,120 +87,59 @@ export default function TabLayout() {
       styleEl = document.createElement('style');
       styleEl.id = styleId;
       styleEl.textContent = `
-        /* Some browsers render a fallback <select> for the tab bar; hide it globally. */
-        select {
-          display: none !important;
-        }
-        nav[role="tablist"] select {
-          display: none !important;
-        }
-        /* Em alguns navegadores/web a lib cria um botao overflow ("More") com um triangulo. */
-        nav[role="tablist"] button[aria-label*="More"],
-        nav[role="tablist"] button[aria-label*="more"],
-        nav[role="tablist"] button[aria-label*="overflow"],
-        nav[role="tablist"] button[aria-label*="Dropdown"],
-        nav[role="tablist"] button[aria-label*="dropdown"] {
-          display: none !important;
-        }
+nav[role="tablist"] select,
+nav[role="tablist"] option,
+nav[role="tablist"] button[aria-label*="More"],
+nav[role="tablist"] button[aria-label*="more"],
+nav[role="tablist"] button[aria-label*="Dropdown"],
+nav[role="tablist"] button[aria-label*="dropdown"],
+nav[role="tablist"] [role="combobox"],
+nav[role="tablist"] [aria-haspopup="listbox"] {
+  display: none !important;
+}
       `;
       document.head.appendChild(styleEl);
     }
     return () => {
-      if (styleEl && styleEl.parentNode) {
+      if (styleEl?.parentNode) {
         styleEl.parentNode.removeChild(styleEl);
       }
     };
   }, []);
 
-  // Em alguns navegadores o Tabs web ainda injeta um <select> ou botões de overflow.
-  // Forçamos esconder após qualquer mutação no DOM.
+  // Extra guard: remove any stray dropdown/arrow nodes created by the web Tabs renderer
   useEffect(() => {
     if (!isWeb) return;
+
+    const arrowTexts = ['?', '?', '?', '?', '?', '?', '?'];
+    const hideEl = (node: Element) => {
+      const el = node as HTMLElement;
+      el.style.display = 'none';
+      el.style.width = '0px';
+      el.style.height = '0px';
+      el.style.opacity = '0';
+      el.style.pointerEvents = 'none';
+    };
 
     const hideDropdowns = () => {
       const selectors = [
         'nav[role="tablist"] select',
         'nav[role="tablist"] option',
-        'nav[role="tablist"] button[aria-label*="More"]',
-        'nav[role="tablist"] button[aria-label*="more"]',
-        'nav[role="tablist"] button[aria-label*="Dropdown"]',
-        'nav[role="tablist"] button[aria-label*="dropdown"]',
-        'nav[role="tablist"] [role="combobox"]',
-        'nav[role="tablist"] [aria-haspopup="listbox"]',
         'nav[role="tablist"] button:not([role="tab"])',
         'nav[role="tablist"] summary',
         'nav[role="tablist"] details',
-        'nav[role="tablist"] > *:not([role="tab"])',
+        'nav[role="tablist"] [role="combobox"]',
         'nav[role="tablist"] [aria-haspopup]',
-        'nav[role="tablist"] [role="button"]',
-        'nav[role="tablist"] > div:last-child',
-        'nav[role="tablist"] > div:last-child *',
         'nav[role="tablist"] .r-flex-13awgt0',
-        'nav[role="tablist"] .r-flex-13awgt0 *',
+        'nav[role="tablist"] .css-view-g5y9jx.r-flex-13awgt0',
       ];
-      document.querySelectorAll(selectors.join(',')).forEach((el) => {
-        const element = el as HTMLElement;
-        element.style.display = 'none';
-        element.style.width = '0px';
-        element.style.height = '0px';
-        element.style.opacity = '0';
-        element.style.pointerEvents = 'none';
-      });
+      document.querySelectorAll(selectors.join(',')).forEach(hideEl);
 
-      // Esconde qualquer elemento-texto com seta "▼" que ainda apareça.
-      document.querySelectorAll('nav[role="tablist"]').forEach((nav) => {
-        nav.querySelectorAll('*').forEach((el) => {
-          const text = (el.textContent || '').trim();
-          if (['▼', '▾', '▿', '⏷', '⏵', '▸', '▹'].includes(text)) {
-            const element = el as HTMLElement;
-            element.style.display = 'none';
-            element.style.width = '0px';
-            element.style.height = '0px';
-            element.style.opacity = '0';
-            element.style.pointerEvents = 'none';
-            const parent = element.parentElement;
-            if (parent) {
-              parent.style.display = 'none';
-              parent.style.width = '0px';
-              parent.style.height = '0px';
-              parent.style.opacity = '0';
-              parent.style.pointerEvents = 'none';
-            }
-          }
-
-          // Se for um tab cujo texto é só seta (fallback), esconde o tab inteiro.
-          if (el.getAttribute && el.getAttribute('role') === 'tab') {
-            const tabText = (el.textContent || '').trim();
-            if (['▼', '▾', '▿', '⏷', '⏵', '▸', '▹'].includes(tabText)) {
-              const element = el as HTMLElement;
-              element.style.display = 'none';
-              element.style.width = '0px';
-              element.style.height = '0px';
-              element.style.opacity = '0';
-              element.style.pointerEvents = 'none';
-              const parent = element.parentElement;
-              if (parent) {
-                parent.style.display = 'none';
-                parent.style.width = '0px';
-                parent.style.height = '0px';
-                parent.style.opacity = '0';
-                parent.style.pointerEvents = 'none';
-              }
-            }
-          }
-        });
-      });
-
-      // Esconde apenas o contêiner problemático de seta dentro do tablist, sem remover outros nós.
-      document.querySelectorAll('nav[role="tablist"] .r-flex-13awgt0').forEach((el) => {
+      document.querySelectorAll('nav[role="tablist"] *').forEach((el) => {
         const text = (el.textContent || '').trim();
-        if (['▼', '▾', '▿', '⏷', '⏵', '▸', '▹'].includes(text)) {
-          const element = el as HTMLElement;
-          element.style.display = 'none';
-          element.style.width = '0px';
-          element.style.height = '0px';
-          element.style.opacity = '0';
-          element.style.pointerEvents = 'none';
+        if (arrowTexts.includes(text)) {
+          hideEl(el);
+          if (el.parentElement) hideEl(el.parentElement);
         }
       });
     };
@@ -227,7 +166,7 @@ export default function TabLayout() {
             borderRadius: 35,
             borderTopWidth: 0,
             overflow: 'hidden',
-            scrollbarWidth: 'none', // esconde qualquer seta/scrollbar no web
+            scrollbarWidth: 'none',
             msOverflowStyle: 'none',
             ...tabBarShadow,
           },
@@ -245,7 +184,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: 'Início',
+            title: 'Inicio',
             tabBarIcon: ({ color, focused }) => (
               <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
                 <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
@@ -264,7 +203,7 @@ export default function TabLayout() {
             ),
           }}
         />
-        {/* Centro: botão Mais (abre popover, não navega) */}
+        {/* Centro: botao Mais (abre popover, nao navega) */}
         <Tabs.Screen
           name="mais"
           listeners={{
@@ -308,7 +247,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="videos"
           options={{
-            title: 'Vídeos',
+            title: 'Videos',
             tabBarIcon: ({ color, focused }) => (
               <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
                 <Ionicons name={focused ? 'play-circle' : 'play-circle-outline'} size={24} color={color} />
@@ -316,7 +255,7 @@ export default function TabLayout() {
             ),
           }}
         />
-        {/* Esconder rotas que não devem aparecer como abas */}
+        {/* Esconder rotas que nao devem aparecer como abas */}
         <Tabs.Screen name="biblioteca" options={{ href: null }} />
         <Tabs.Screen name="calendario" options={{ href: null }} />
         <Tabs.Screen name="perfil" options={{ href: null }} />
@@ -325,19 +264,19 @@ export default function TabLayout() {
         <Tabs.Screen name="quiz/[year]" options={{ href: null }} />
       </Tabs>
 
-      {/* Popover ancorado ao tab bar (sem navegar de página) */}
+      {/* Popover ancorado ao tab bar (sem navegar de pagina) */}
       {moreOpen && (
         <>
           <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
             <Pressable style={{ flex: 1 }} onPress={closeMore} />
           </Animated.View>
           <Animated.View style={[styles.popover, { opacity: popoverOpacity, transform: [{ translateY: popoverTranslate }] }]}>
-            <Text style={styles.sheetTitle}>Mais opções</Text>
+            <Text style={styles.sheetTitle}>Mais opcoes</Text>
 
             <Link href="/(tabs)/calendario" asChild>
               <TouchableOpacity style={styles.sheetItem} onPress={closeMore}>
                 <Ionicons name="calendar-outline" size={20} color="#111827" />
-                <Text style={styles.sheetItemText}>Calendário</Text>
+                <Text style={styles.sheetItemText}>Calendario</Text>
               </TouchableOpacity>
             </Link>
 
@@ -348,8 +287,6 @@ export default function TabLayout() {
               </TouchableOpacity>
             </Link>
 
-            {/* Trilhas removido do atalho; conteúdo oficial fica em Simulados */}
-
             <Link href="/(tabs)/quiz" asChild>
               <TouchableOpacity style={styles.sheetItem} onPress={closeMore}>
                 <Ionicons name="document-text-outline" size={20} color="#111827" />
@@ -358,7 +295,7 @@ export default function TabLayout() {
             </Link>
 
             <View style={styles.sheetGroupTitleWrap}>
-              <Text style={styles.sheetGroupTitle}>Matérias</Text>
+              <Text style={styles.sheetGroupTitle}>Materias</Text>
             </View>
             <View style={styles.row}>
               <Link href="/(tabs)/materias/artes" asChild>
@@ -370,7 +307,7 @@ export default function TabLayout() {
               <Link href="/(tabs)/materias/ciencia" asChild>
                 <TouchableOpacity style={styles.pill} onPress={closeMore}>
                   <Ionicons name="flask-outline" size={16} color="#3B82F6" />
-                  <Text style={styles.pillText}>Ciência</Text>
+                  <Text style={styles.pillText}>Ciencia</Text>
                 </TouchableOpacity>
               </Link>
             </View>
@@ -378,7 +315,7 @@ export default function TabLayout() {
               <Link href="/(tabs)/materias/matematica" asChild>
                 <TouchableOpacity style={styles.pill} onPress={closeMore}>
                   <Ionicons name="calculator-outline" size={16} color="#10B981" />
-                  <Text style={styles.pillText}>Matemática</Text>
+                  <Text style={styles.pillText}>Matematica</Text>
                 </TouchableOpacity>
               </Link>
               <Link href="/(tabs)/materias/letras" asChild>
@@ -412,7 +349,6 @@ const styles = StyleSheet.create({
   iconContainerActive: {
     backgroundColor: 'rgba(79, 70, 229, 0.1)',
   },
-  // Sem offset extra; usa tabBarIconStyle global
   iconAlignFix: {},
   moreLabel: {
     fontSize: 12,

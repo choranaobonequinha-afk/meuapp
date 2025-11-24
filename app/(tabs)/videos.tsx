@@ -8,15 +8,13 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../store/themeStore';
 import { useLessons } from '../../hooks/useLessons';
-
-const { width } = Dimensions.get('window');
 
 const ICON_BY_SUBJECT: Record<string, keyof typeof Ionicons.glyphMap> = {
   matematica: 'calculator-outline',
@@ -28,6 +26,9 @@ const ICON_BY_SUBJECT: Record<string, keyof typeof Ionicons.glyphMap> = {
 export default function VideosScreen() {
   const insets = useSafeAreaInsets();
   const theme = useThemeColors();
+  const { width } = useWindowDimensions();
+  const isTablet = width > 640;
+  const isWide = width > 900;
   const bottomSpace = insets.bottom + 140;
   const {
     featuredLessons,
@@ -40,6 +41,20 @@ export default function VideosScreen() {
   } = useLessons();
   const [selectedSubject, setSelectedSubject] = useState('todos');
   const scrollRef = useRef<ScrollView | null>(null);
+  const allLessons = useMemo(() => {
+    const list: typeof featuredLessons = [];
+    lessonsBySubject.forEach((arr) => list.push(...arr));
+    return list;
+  }, [lessonsBySubject, featuredLessons]);
+  const completionStats = useMemo(() => {
+    const total = allLessons.length || stateCount(lessonsBySubject);
+    const done = allLessons.filter((l) => l.progress?.status === 'done').length;
+    const subjects = subjectsMeta.length;
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    return { total, done, subjects, pct };
+  }, [allLessons, lessonsBySubject, subjectsMeta]);
+  const featuredCardWidth = Math.min(width * (isTablet ? 0.68 : 0.9), 520);
+  const subjectCardWidth = isWide ? '48%' : '100%';
 
   const categories = useMemo(
     () => [
@@ -83,6 +98,15 @@ export default function VideosScreen() {
       })),
     [subjectsMeta]
   );
+  const heroStatsData = useMemo(
+    () => [
+      { label: 'Aulas', value: completionStats.total || '–', icon: 'play-outline' as const },
+      { label: 'Concluidas', value: completionStats.done || '–', icon: 'checkmark-done-outline' as const },
+      { label: 'Materias', value: completionStats.subjects || '–', icon: 'color-filter-outline' as const },
+      { label: 'Progresso', value: `${completionStats.pct}%`, icon: 'trending-up-outline' as const },
+    ],
+    [completionStats.done, completionStats.pct, completionStats.subjects, completionStats.total]
+  );
 
   const openVideo = async (url?: string | null) => {
     if (!url) return;
@@ -114,48 +138,76 @@ export default function VideosScreen() {
           contentContainerStyle={{ paddingBottom: bottomSpace, gap: 32 }}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
-            <Text style={styles.screenTitle}>Aulas em video</Text>
-            <Text style={styles.screenSubtitle}>Assista, marque como concluido e continue o progresso.</Text>
-            {loading ? null : error ? (
-              <TouchableOpacity onPress={refresh} style={styles.refreshBtn}>
-                <Ionicons name="refresh" size={16} color="#FFFFFF" />
-                <Text style={styles.refreshText}>Tentar novamente</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          {/* Categorias */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>
-            {categories.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.categoryChip,
-                  {
-                    backgroundColor:
-                      selectedSubject === category.id ? category.color : 'rgba(255,255,255,0.08)',
-                    borderColor: selectedSubject === category.id ? category.color : 'rgba(255,255,255,0.2)',
-                  },
-                ]}
-                onPress={() => setSelectedSubject(category.id)}
-              >
-                <Ionicons
-                  name={category.icon}
-                  size={16}
-                  color={selectedSubject === category.id ? '#FFFFFF' : category.color}
-                />
-                <Text
-                  style={[
-                    styles.categoryText,
-                    { color: selectedSubject === category.id ? '#FFFFFF' : category.color },
-                  ]}
-                >
-                  {category.name} ({category.lessons})
+          <View style={styles.heroCard}>
+            <View style={styles.heroTop}>
+              <View style={{ flex: 1, gap: 8 }}>
+                <View style={styles.heroBadge}>
+                  <Ionicons name="sparkles-outline" size={14} color="#0B1224" />
+                  <Text style={styles.heroBadgeText}>Trilha guiada</Text>
+                </View>
+                <Text style={styles.screenTitle}>Aulas em video</Text>
+                <Text style={styles.screenSubtitle}>
+                  Assista, marque como concluido e continue o progresso. Filtre por materia para focar.
                 </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                <View style={styles.heroActions}>
+                  <TouchableOpacity onPress={refresh} style={styles.refreshBtn} disabled={loading}>
+                    <Ionicons name="refresh" size={16} color="#0B1224" />
+                    <Text style={[styles.refreshText, { color: '#0B1224' }]}>Atualizar</Text>
+                  </TouchableOpacity>
+                  {error ? (
+                    <View style={styles.heroErrorPill}>
+                      <Ionicons name="warning-outline" size={14} color="#FACC15" />
+                      <Text style={styles.heroErrorText}>Falha ao carregar. Tente novamente.</Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+              <View style={[styles.heroStats, !isTablet && styles.heroStatsStack]}>
+                {heroStatsData.map((stat) => (
+                  <View key={stat.label} style={styles.statPill}>
+                    <View style={styles.statPillIcon}>
+                      <Ionicons name={stat.icon} size={14} color="#0B1224" />
+                    </View>
+                    <View>
+                      <Text style={styles.statPillValue}>{stat.value}</Text>
+                      <Text style={styles.statPillLabel}>{stat.label}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.categoryChip,
+                    {
+                      backgroundColor:
+                        selectedSubject === category.id ? category.color : 'rgba(255,255,255,0.08)',
+                      borderColor: selectedSubject === category.id ? category.color : 'rgba(255,255,255,0.2)',
+                    },
+                  ]}
+                  onPress={() => setSelectedSubject(category.id)}
+                >
+                  <Ionicons
+                    name={category.icon}
+                    size={16}
+                    color={selectedSubject === category.id ? '#FFFFFF' : category.color}
+                  />
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      { color: selectedSubject === category.id ? '#FFFFFF' : '#E5E7EB' },
+                    ]}
+                  >
+                    {category.name} ({category.lessons})
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
 
           {/* Destaques */}
           <View>
@@ -182,7 +234,7 @@ export default function VideosScreen() {
                 contentContainerStyle={{ gap: 16, paddingRight: 16 }}
               >
                 {heroLessons.map((lesson) => (
-                  <View key={lesson.id} style={[styles.featuredCard, { width: width * 0.8 }]}>
+                  <View key={lesson.id} style={[styles.featuredCard, { width: featuredCardWidth }]}>
                     <TouchableOpacity
                       activeOpacity={0.85}
                       onPress={() => openVideo(lesson.video_url)}
@@ -249,9 +301,9 @@ export default function VideosScreen() {
                     <Text style={styles.sectionTagText}>{lessons.length} aulas</Text>
                   </View>
                 </View>
-                <View style={styles.subjectGrid}>
+                <View style={[styles.subjectGrid, isWide && styles.subjectGridWide]}>
                   {lessons.map((lesson) => (
-                    <View key={lesson.id} style={styles.subjectCard}>
+                    <View key={lesson.id} style={[styles.subjectCard, isWide && { width: subjectCardWidth }]}>
                       <View style={styles.subjectHeader}>
                         <View
                           style={[
@@ -268,7 +320,7 @@ export default function VideosScreen() {
                         <View style={{ flex: 1 }}>
                           <Text style={styles.subjectName}>{lesson.title}</Text>
                           <Text style={styles.subjectMeta}>
-                            {lesson.module} • {lesson.duration_minutes} min
+                            {lesson.module} - {lesson.duration_minutes} min
                           </Text>
                         </View>
                       </View>
@@ -348,7 +400,7 @@ export default function VideosScreen() {
             <View style={styles.tipItem}>
               <Ionicons name="timer-outline" size={18} color="#FFFFFF" />
               <Text style={styles.tipText}>
-                Reserve blocos curtos de 25 minutos para assistir aulas sem distrações.
+                Reserve blocos curtos de 25 minutos para assistir aulas sem distracoes.
               </Text>
             </View>
             <View style={styles.tipItem}>
@@ -367,7 +419,7 @@ export default function VideosScreen() {
             <View style={styles.emptyStateBox}>
               <Text style={styles.emptyTitle}>Sem conteudo ainda</Text>
               <Text style={styles.emptySubtitle}>
-                Cadastre novas aulas no Supabase (tabela lessons) para que apareçam aqui.
+                Cadastre novas aulas no Supabase (tabela lessons) para que aparecam aqui.
               </Text>
             </View>
           ) : null}
@@ -394,6 +446,100 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
   },
+  heroCard: {
+    width: '100%',
+    borderRadius: 20,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(0,0,0,0.22)',
+  },
+  heroTop: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+  },
+  heroBadge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#A5E4FF',
+  },
+  heroBadgeText: {
+    color: '#0B1224',
+    fontWeight: '800',
+    fontSize: 12,
+    letterSpacing: 0.2,
+  },
+  heroActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  heroErrorPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(250,204,21,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(250,204,21,0.4)',
+  },
+  heroErrorText: {
+    color: '#FACC15',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  heroStats: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 8,
+    flexWrap: 'wrap',
+    minWidth: 220,
+  },
+  heroStatsStack: {
+    width: '100%',
+  },
+  statPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    flex: 1,
+    minWidth: 140,
+  },
+  statPillIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#A5E4FF',
+  },
+  statPillValue: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  statPillLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   header: {
     gap: 8,
   },
@@ -415,10 +561,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: '#A5E4FF',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
   },
   refreshText: {
-    color: '#FFFFFF',
+    color: '#0B1224',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -435,6 +583,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   categoryText: {
     fontSize: 13,
@@ -481,11 +631,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   featuredCard: {
-    backgroundColor: 'rgba(15,23,42,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.2)',
+    shadowColor: '#1E3A8A',
+    shadowOpacity: 0.24,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
   thumbnailContainer: {
     position: 'relative',
@@ -574,13 +729,23 @@ const styles = StyleSheet.create({
   },
   subjectGrid: {
     gap: 12,
+    flexDirection: 'column',
+  },
+  subjectGridWide: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   subjectCard: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.22)',
+    shadowColor: '#1E3A8A',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 5,
   },
   subjectHeader: {
     flexDirection: 'row',
@@ -600,7 +765,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   subjectMeta: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(229,231,235,0.8)',
     fontSize: 12,
   },
   subjectDescription: {
@@ -620,7 +785,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: 'rgba(79,70,229,0.6)',
+    backgroundColor: '#2563EB',
   },
   actionButtonText: {
     color: '#FFFFFF',
@@ -635,9 +800,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 20,
     padding: 16,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   channelAvatar: {
     width: 48,
@@ -671,12 +836,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   tipsCard: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 20,
     padding: 20,
     gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   tipsTitle: {
     color: '#FFFFFF',
@@ -700,9 +865,9 @@ const styles = StyleSheet.create({
   emptyStateBox: {
     padding: 20,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.18)',
     gap: 6,
   },
   emptyTitle: {

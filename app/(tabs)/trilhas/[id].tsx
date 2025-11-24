@@ -46,12 +46,7 @@ export default function TrilhaDetalhe() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-        <LinearGradient
-          colors={[trilha.color_hex, '#4F46E5']}
-          style={styles.hero}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
+        <LinearGradient colors={[trilha.color_hex, '#60A5FA']} style={styles.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <View style={styles.heroHead}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
               <Ionicons name="chevron-back" size={18} color="#FFFFFF" />
@@ -68,6 +63,10 @@ export default function TrilhaDetalhe() {
               <Text style={styles.heroStatValue}>{trilha.items.length}</Text>
               <Text style={styles.heroStatLabel}>Passos</Text>
             </View>
+            <View>
+              <Text style={styles.heroStatValue}>{lessons.length}</Text>
+              <Text style={styles.heroStatLabel}>Aulas</Text>
+            </View>
           </View>
         </LinearGradient>
 
@@ -77,7 +76,7 @@ export default function TrilhaDetalhe() {
             {lessons.map((item, index) => (
               <LinearGradient
                 key={item.id}
-                colors={['rgba(79,70,229,0.15)', 'rgba(37,99,235,0.12)']}
+                colors={['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.08)']}
                 style={styles.stepCard}
               >
                 <View style={styles.stepBadge}>
@@ -87,8 +86,8 @@ export default function TrilhaDetalhe() {
                   <Text style={styles.stepTitle}>{item.lesson?.title || item.title || 'Aula'}</Text>
                   <Text style={styles.stepSubtitle}>
                     {item.lesson?.module
-                      ? `${item.lesson.module} • ${item.estimated_minutes} min`
-                      : `${item.estimated_minutes} min estimados`}
+                      ? `${item.lesson.module} - ${item.estimated_minutes || 20} min`
+                      : `${item.estimated_minutes || 20} min estimados`}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -117,8 +116,13 @@ export default function TrilhaDetalhe() {
                   style={[
                     styles.resourceCard,
                     {
-                      borderColor: 'rgba(79,70,229,0.35)',
-                      backgroundColor: 'rgba(79,70,229,0.08)',
+                      borderColor: 'rgba(255,255,255,0.18)',
+                      backgroundColor: 'rgba(255,255,255,0.12)',
+                      shadowColor: '#1E3A8A',
+                      shadowOpacity: 0.2,
+                      shadowRadius: 8,
+                      shadowOffset: { width: 0, height: 4 },
+                      elevation: 4,
                     },
                   ]}
                   onPress={() =>
@@ -126,8 +130,8 @@ export default function TrilhaDetalhe() {
                   }
                 >
                   <View style={styles.resourceBadge}>
-                    <Ionicons name="document-text-outline" size={14} color="#4F46E5" />
-                    <Text style={styles.resourceBadgeText}>Oficial</Text>
+                    <Ionicons name="document-text-outline" size={14} color={trilha.color_hex || '#4F46E5'} />
+                    <Text style={[styles.resourceBadgeText, { color: trilha.color_hex || '#4F46E5' }]}>Oficial</Text>
                   </View>
                   <Text style={[styles.resourceTitle, { color: theme.text }]}>{resource.title}</Text>
                   {resource.description ? (
@@ -200,6 +204,8 @@ const styles = StyleSheet.create({
     gap: 12,
     alignItems: 'center',
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   stepBadge: {
     width: 36,

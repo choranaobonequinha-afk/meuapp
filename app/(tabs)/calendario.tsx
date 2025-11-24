@@ -135,18 +135,19 @@ export default function CalendarioScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: 40, gap: 20 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 40, gap: 20, alignItems: 'center' }}
       >
-        <View style={styles.header}>
-          <View>
-            <Text style={[styles.title, { color: theme.text }]}>Calendario inteligente</Text>
-            <Text style={[styles.subtitle, { color: theme.textMuted }]}>Seu cronograma de estudos sempre organizado.</Text>
+        <View style={styles.maxWidth}>
+          <View style={styles.header}>
+            <View style={styles.headerText}>
+              <Text style={[styles.title, { color: theme.text }]}>Calendario inteligente</Text>
+              <Text style={[styles.subtitle, { color: theme.textMuted }]}>Seu cronograma de estudos sempre organizado.</Text>
+            </View>
+            <TouchableOpacity style={styles.addButton} onPress={() => openModal()}>
+              <Ionicons name='add' size={18} color='#FFFFFF' />
+              <Text style={styles.addButtonText}>Novo evento</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={() => openModal()}>
-            <Ionicons name='add' size={18} color='#FFFFFF' />
-            <Text style={styles.addButtonText}>Novo evento</Text>
-          </TouchableOpacity>
-        </View>
 
         <View style={styles.segment}>
           {[
@@ -177,7 +178,7 @@ export default function CalendarioScreen() {
             <Text style={{ color: '#FFFFFF', marginLeft: 8 }}>Carregando eventos...</Text>
           </View>
         ) : viewMode === 'agenda' ? (
-          <View style={styles.section}>
+          <View style={[styles.section, styles.maxWidth]}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Agenda</Text>
             {sortedEvents.length === 0 ? (
               <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>
@@ -202,7 +203,7 @@ export default function CalendarioScreen() {
             )}
           </View>
         ) : viewMode === 'week' ? (
-          <View style={styles.section}>
+          <View style={[styles.section, styles.maxWidth]}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Semana em foco</Text>
             <View style={styles.weekRow}>
               {weekPreview.map((day) => (
@@ -220,7 +221,7 @@ export default function CalendarioScreen() {
             </View>
           </View>
         ) : (
-          <View style={styles.section}>
+          <View style={[styles.section, styles.maxWidth]}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Visao mensal</Text>
             <View style={styles.monthHeader}>
               {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, index) => (
@@ -249,6 +250,7 @@ export default function CalendarioScreen() {
             </View>
           </View>
         )}
+        </View>
       </ScrollView>
 
       <Modal visible={modalVisible} transparent animationType='slide' onRequestClose={closeModal}>
@@ -413,7 +415,15 @@ function generateMonthMatrix(current: Date, events: CalendarEvent[]) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
+  maxWidth: { width: '100%', maxWidth: 1000, alignSelf: 'center', gap: 16 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  headerText: { flex: 1, minWidth: 220, gap: 4 },
   title: { fontSize: 24, fontWeight: '800' },
   subtitle: { fontSize: 14, lineHeight: 18 },
   addButton: {
@@ -424,6 +434,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     backgroundColor: '#4F46E5',
+    alignSelf: 'flex-start',
   },
   addButtonText: { color: '#FFFFFF', fontWeight: '700' },
   segment: {

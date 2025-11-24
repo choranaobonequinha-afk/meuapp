@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
   useWindowDimensions,
@@ -20,24 +21,49 @@ type ResourceItem = ReturnType<typeof useStudyTracks>['resources'][number] & {
   trackExam?: string;
 };
 
+const COLOR_OPTIONS: { id: 'azul' | 'amarelo' | 'verde' | 'branco' | 'cinza'; label: string; color: string; text?: string }[] =
+  [
+    { id: 'azul', label: 'Azul', color: '#2563EB' },
+    { id: 'amarelo', label: 'Amarelo', color: '#F59E0B' },
+    { id: 'verde', label: 'Verde', color: '#16A34A' },
+    { id: 'branco', label: 'Branco', color: '#E5E7EB', text: '#0F172A' },
+    { id: 'cinza', label: 'Cinza', color: '#9CA3AF', text: '#0F172A' },
+  ];
+
 export default function QuizScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const theme = useThemeColors();
   const { width } = useWindowDimensions();
+  const isWide = width > 760;
+  const isTablet = width > 640;
   const bottomSpace = insets.bottom + 140;
+  const accentColors = ['#22D3EE', '#F97316', '#34D399', '#60A5FA', '#F472B6', '#A3E635'];
+  const examCardWidth = isTablet ? 180 : 160;
   const { questions, loading, error, exams, subjects, randomQuestion } = useQuizBank();
   const { resources } = useStudyTracks();
+  const scrollRef = useRef<ScrollView>(null);
+  const resourcesOffset = useRef(0);
+  const hasQuestions = questions.length > 0;
   const [currentQuestion, setCurrentQuestion] = useState(randomQuestion || null);
   const [selected, setSelected] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [selectedExam, setSelectedExam] = useState<string>('ENEM');
+  const [resourceFilter, setResourceFilter] = useState<'all' | 'day1' | 'day2' | 'gaba'>('all');
+  const [colorFilter, setColorFilter] = useState<'none' | 'azul' | 'amarelo' | 'verde' | 'branco' | 'cinza'>('none');
+  const [yearQuery, setYearQuery] = useState('');
 
   useEffect(() => {
     if (!currentQuestion && randomQuestion) {
       setCurrentQuestion(randomQuestion);
     }
   }, [randomQuestion, currentQuestion]);
+
+  useEffect(() => {
+    if (!currentQuestion && questions.length > 0) {
+      setCurrentQuestion(questions[0]);
+    }
+  }, [questions, currentQuestion]);
 
   const categories = useMemo(
     () =>
@@ -47,6 +73,10 @@ export default function QuizScreen() {
         questions: item.count,
       })),
     [exams]
+  );
+  const maxExamQuestions = useMemo(
+    () => categories.reduce((max, item) => Math.max(max, item.questions || 0), 1),
+    [categories]
   );
 
   const subjectStats = useMemo(
@@ -62,9 +92,10 @@ export default function QuizScreen() {
   );
 
   const handleShuffle = () => {
+    if (questions.length === 0) return;
     setCurrentQuestion((prev) => {
       const pool = questions.filter((q) => q.id !== prev?.id);
-      if (pool.length === 0) return prev;
+      if (pool.length === 0) return prev ?? questions[0];
       return pool[Math.floor(Math.random() * pool.length)];
     });
     setSelected(null);
@@ -74,6 +105,14 @@ export default function QuizScreen() {
   const handleSelect = (index: number) => {
     setSelected(index);
     setRevealed(true);
+  };
+
+  const handleOpenResources = () => {
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ y: Math.max(resourcesOffset.current - 12, 0), animated: true });
+      }
+    });
   };
 
   const examResources = useMemo(() => {
@@ -95,22 +134,45 @@ export default function QuizScreen() {
   }, [examList, examResources, selectedExam]);
 
   const activeResources = examResources[selectedExam] || [];
-  const isWide = width > 760;
-  const cardWidth = isWide ? '48%' : '100%';
+  const filteredResources = useMemo(() => {
+    const q = yearQuery.trim().toLowerCase();
+    return activeResources.filter((item) => {
+      const title = (item.title || '').toLowerCase();
+      const isGabarito = title.includes('gabarito');
+      const isDay1 = /1\s*(º|o)?\s*dia/i.test(title);
+      const isDay2 = /2\s*(º|o)?\s*dia/i.test(title);
+      const matchesColor =
+        colorFilter === 'none' ||
+        title.includes(colorFilter) ||
+        (colorFilter === 'branco' && title.includes('branca'));
+      const matchesFilter =
+        resourceFilter === 'all' ||
+        (resourceFilter === 'gaba' && isGabarito) ||
+        (resourceFilter === 'day1' && isDay1) ||
+        (resourceFilter === 'day2' && isDay2);
+      const matchesQuery = q.length === 0 || title.includes(q);
+      return matchesFilter && matchesQuery && matchesColor;
+    });
+  }, [activeResources, resourceFilter, colorFilter, yearQuery]);
+  const filtersActive =
+    resourceFilter !== 'all' || colorFilter !== 'none' || yearQuery.trim().length > 0;
+  const displayResources = filtersActive ? filteredResources : activeResources;
 
   const yearsAvailable = useMemo(() => {
     const set = new Set<string>();
-    activeResources.forEach((item) => {
-      const match = /ENEM\s+(\d{4})/i.exec(item.title || '');
+    displayResources.forEach((item) => {
+      const title = item.title || '';
+      const match = /ENEM\s+(\d{4})/i.exec(title) || /(\d{4})/.exec(title);
       if (match?.[1]) set.add(match[1]);
     });
     return Array.from(set).sort((a, b) => b.localeCompare(a));
-  }, [activeResources]);
+  }, [displayResources]);
 
   const yearMeta = useMemo(() => {
     const map = new Map<string, { color: string; count: number }>();
-    activeResources.forEach((item) => {
-      const match = /ENEM\s+(\d{4})/i.exec(item.title || '');
+    displayResources.forEach((item) => {
+      const title = item.title || '';
+      const match = /ENEM\s+(\d{4})/i.exec(title) || /(\d{4})/.exec(title);
       if (!match?.[1]) return;
       const year = match[1];
       if (!map.has(year)) map.set(year, { color: item.trackColor, count: 0 });
@@ -119,7 +181,16 @@ export default function QuizScreen() {
       if (!entry.color && item.trackColor) entry.color = item.trackColor;
     });
     return map;
-  }, [activeResources]);
+  }, [displayResources]);
+
+  const heroStats = useMemo(
+    () => [
+      { label: 'Questoes', value: questions.length, icon: 'sparkles-outline' as const },
+      { label: 'Exames', value: exams.length, icon: 'trophy-outline' as const },
+      { label: 'Recursos', value: resources.length, icon: 'document-text-outline' as const },
+    ],
+    [questions.length, exams.length, resources.length]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -130,6 +201,7 @@ export default function QuizScreen() {
         end={{ x: 1, y: 1 }}
       >
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={{
             paddingHorizontal: 20,
             paddingBottom: bottomSpace,
@@ -140,9 +212,63 @@ export default function QuizScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.maxWidth}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Quiz & Provas</Text>
-              <Text style={styles.subtitle}>Questoes reais alimentadas pelo Supabase.</Text>
+            <View style={styles.heroCard}>
+              <View style={styles.heroLeft}>
+                <View style={styles.heroBadge}>
+                  <Ionicons name="flash-outline" size={14} color="#0B1224" />
+                  <Text style={styles.heroBadgeText}>Modo turbo ENEM</Text>
+                </View>
+                <Text style={styles.heroTitle}>Quiz & Provas</Text>
+                <Text style={styles.heroSubtitle}>Revisao rapida com questoes reais e filtros para encontrar o caderno certo.</Text>
+                <View style={styles.heroActions}>
+                  <TouchableOpacity
+                    onPress={handleShuffle}
+                    style={[styles.primaryBtn, !hasQuestions && styles.btnDisabled]}
+                    disabled={!hasQuestions}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="shuffle" size={16} color="#0B1224" />
+                    <Text style={styles.primaryBtnText}>Nova questao</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.secondaryBtn, examList.length === 0 && styles.btnDisabled]}
+                    onPress={() => {
+                      if (examList.length > 0) {
+                        setSelectedExam(examList.includes('ENEM') ? 'ENEM' : examList[0]);
+                      }
+                      handleOpenResources();
+                    }}
+                    disabled={examList.length === 0}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="folder-open-outline" size={16} color="#FFFFFF" />
+                    <Text style={styles.secondaryBtnText}>Abrir provas</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.heroChips}>
+                  {examList.slice(0, 3).map((examKey) => (
+                    <View key={examKey} style={styles.heroChip}>
+                      <Text style={styles.heroChipText}>{examKey}</Text>
+                    </View>
+                  ))}
+                  {examList.length === 0 ? (
+                    <View style={styles.heroChip}>
+                      <Text style={styles.heroChipText}>Cadastre exames</Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+              <View style={[styles.heroStatsGrid, !isTablet && styles.heroStatsGridStacked]}>
+                {heroStats.map((stat) => (
+                  <View key={stat.label} style={styles.statCard}>
+                    <View style={styles.statIcon}>
+                      <Ionicons name={stat.icon} size={18} color="#0B1224" />
+                    </View>
+                    <Text style={styles.statValue}>{stat.value || '-'}</Text>
+                    <Text style={styles.statLabel}>{stat.label}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
 
             {loading ? (
@@ -154,94 +280,154 @@ export default function QuizScreen() {
               <Text style={styles.errorText}>{error}</Text>
             ) : null}
 
-            {/* Categorias */}
-            <View>
-              <Text style={styles.sectionTitle}>Simulados por exame</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-                {categories.map((cat) => (
-                  <TouchableOpacity key={cat.id} style={styles.examCard}>
-                    <View style={styles.examIcon}>
-                      <Ionicons name="ribbon-outline" size={18} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.examTitle}>{cat.title}</Text>
-                    <Text style={styles.examSubtitle}>{cat.questions} questoes</Text>
+            {/* Questao destaque + materias */}
+            <View style={[styles.splitRow, isWide && styles.splitRowWide]}>
+              <View style={[styles.questionCard, isWide && styles.splitCol]}>
+                <View style={styles.questionHeader}>
+                  <View style={styles.questionBadge}>
+                    <Ionicons name="flash-outline" size={14} color="#FFFFFF" />
+                    <Text style={styles.questionBadgeText}>{currentQuestion?.exam?.toUpperCase() || 'ENEM'}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={handleShuffle}
+                    style={[styles.shuffleBtn, !hasQuestions && styles.btnDisabled]}
+                    disabled={!hasQuestions}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="shuffle" size={16} color="#FFFFFF" />
+                    <Text style={styles.shuffleText}>Nova questao</Text>
                   </TouchableOpacity>
-                ))}
+                </View>
+                {currentQuestion ? (
+                  <>
+                    <Text style={styles.questionText}>{currentQuestion.question}</Text>
+                    <View style={{ gap: 8, marginTop: 12 }}>
+                      {currentQuestion.options.map((option, index) => {
+                        const isCorrect = revealed && currentQuestion.correct_option === index + 1;
+                        const isSelected = selected === index + 1;
+                        return (
+                          <TouchableOpacity
+                            key={option}
+                            onPress={() => handleSelect(index + 1)}
+                            style={[
+                              styles.optionCard,
+                              isSelected && { borderColor: '#60A5FA', backgroundColor: 'rgba(96,165,250,0.18)' },
+                              isCorrect && { borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.15)' },
+                            ]}
+                          >
+                            <Text style={styles.optionLetter}>{String.fromCharCode(65 + index)}</Text>
+                            <Text style={styles.optionText}>{option}</Text>
+                            {isCorrect ? <Ionicons name="checkmark" size={18} color="#10B981" /> : null}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    {revealed && currentQuestion.explanation ? (
+                      <View style={styles.explanation}>
+                        <Text style={styles.explanationTitle}>Explicacao</Text>
+                        <Text style={styles.explanationText}>{currentQuestion.explanation}</Text>
+                      </View>
+                    ) : null}
+                  </>
+                ) : (
+                  <Text style={styles.emptyText}>Cadastre perguntas na tabela quiz_questions para praticar.</Text>
+                )}
+              </View>
+
+              {/* Estatisticas por materia */}
+              <View style={[styles.subjectPanel, isWide && styles.splitCol]}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Radar de materias</Text>
+                  <View style={styles.sectionTag}>
+                    <Ionicons name="pulse-outline" size={14} color="#0B1224" />
+                    <Text style={styles.sectionTagText}>Priorize revisao</Text>
+                  </View>
+                </View>
+                <View style={{ gap: 12 }}>
+                  {subjectStats.map((subject) => (
+                    <View key={subject.id} style={styles.subjectCard}>
+                      <View style={{ flex: 1, gap: 6 }}>
+                        <Text style={styles.subjectName}>{subject.title}</Text>
+                        <Text style={styles.subjectInfo}>
+                          {subject.completed}/{subject.total} questoes resolvidas
+                        </Text>
+                        <View style={styles.progressTrack}>
+                          <View style={[styles.progressFill, { width: `${Math.min(subject.accuracy, 100)}%` }]} />
+                        </View>
+                      </View>
+                      <View style={styles.subjectAccuracy}>
+                        <Text style={styles.subjectAccuracyScore}>{subject.accuracy}%</Text>
+                        <Text style={styles.subjectAccuracyLabel}>Precisao</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            {/* Categorias */}
+            <View style={styles.panelCard}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionHeaderText}>
+                  <Text style={styles.sectionTitle}>Rotas de simulados</Text>
+                  <Text style={styles.subtitle}>Escolha um exame e veja quantas questoes ja temos prontas.</Text>
+                </View>
+                <View style={styles.sectionTag}>
+                  <Ionicons name="bar-chart-outline" size={14} color="#0B1224" />
+                  <Text style={styles.sectionTagText}>Auto-gerado</Text>
+                </View>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+                {categories.length === 0 ? (
+                  <View style={styles.emptyPill}>
+                    <Text style={styles.emptyText}>Nenhum exame cadastrado ainda.</Text>
+                  </View>
+                ) : (
+                  categories.map((cat, idx) => {
+                    const color = accentColors[idx % accentColors.length];
+                    const ratio = Math.min(100, Math.round((cat.questions / maxExamQuestions) * 100));
+                    return (
+                      <TouchableOpacity
+                        key={cat.id}
+                        style={[
+                          styles.examCard,
+                          { width: examCardWidth, borderColor: `${color}33`, backgroundColor: 'rgba(255,255,255,0.08)' },
+                        ]}
+                        onPress={() => setSelectedExam(cat.title)}
+                      >
+                        <View style={[styles.examIcon, { backgroundColor: `${color}1A` }]}>
+                          <Ionicons name="ribbon-outline" size={18} color={color} />
+                        </View>
+                        <View style={styles.examCardBody}>
+                          <Text style={styles.examTitle}>{cat.title}</Text>
+                          <Text style={[styles.examSubtitle, { color }]}>{cat.questions} questoes</Text>
+                        </View>
+                        <View style={styles.examBar}>
+                          <View style={[styles.examBarFill, { width: `${ratio}%`, backgroundColor: color }]} />
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
               </ScrollView>
             </View>
 
-            {/* Questao destaque */}
-            <View style={styles.questionCard}>
-              <View style={styles.questionHeader}>
-                <View style={styles.questionBadge}>
-                  <Ionicons name="flash-outline" size={14} color="#FFFFFF" />
-                  <Text style={styles.questionBadgeText}>{currentQuestion?.exam?.toUpperCase() || 'ENEM'}</Text>
-                </View>
-                <TouchableOpacity onPress={handleShuffle} style={styles.shuffleBtn}>
-                  <Ionicons name="shuffle" size={16} color="#FFFFFF" />
-                  <Text style={styles.shuffleText}>Nova questao</Text>
-                </TouchableOpacity>
-              </View>
-              {currentQuestion ? (
-                <>
-                  <Text style={styles.questionText}>{currentQuestion.question}</Text>
-                  <View style={{ gap: 8, marginTop: 12 }}>
-                    {currentQuestion.options.map((option, index) => {
-                      const isCorrect = revealed && currentQuestion.correct_option === index + 1;
-                      const isSelected = selected === index + 1;
-                      return (
-                        <TouchableOpacity
-                          key={option}
-                          onPress={() => handleSelect(index + 1)}
-                          style={[
-                            styles.optionCard,
-                            isSelected && { borderColor: '#60A5FA', backgroundColor: 'rgba(96,165,250,0.18)' },
-                            isCorrect && { borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.15)' },
-                          ]}
-                        >
-                          <Text style={styles.optionLetter}>{String.fromCharCode(65 + index)}</Text>
-                          <Text style={styles.optionText}>{option}</Text>
-                          {isCorrect ? <Ionicons name="checkmark" size={18} color="#10B981" /> : null}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                  {revealed && currentQuestion.explanation ? (
-                    <View style={styles.explanation}>
-                      <Text style={styles.explanationTitle}>Explicacao</Text>
-                      <Text style={styles.explanationText}>{currentQuestion.explanation}</Text>
-                    </View>
-                  ) : null}
-                </>
-              ) : (
-                <Text style={styles.emptyText}>Cadastre perguntas na tabela quiz_questions para praticar.</Text>
-              )}
-            </View>
-
-            {/* Estatisticas por materia */}
-            <View style={{ gap: 12 }}>
-              <Text style={styles.sectionTitle}>Desempenho por materia</Text>
-              {subjectStats.map((subject) => (
-                <View key={subject.id} style={styles.subjectCard}>
-                  <View>
-                    <Text style={styles.subjectName}>{subject.title}</Text>
-                    <Text style={styles.subjectInfo}>
-                      {subject.completed}/{subject.total} questoes resolvidas
-                    </Text>
-                  </View>
-                  <View style={styles.subjectAccuracy}>
-                    <Text style={styles.subjectAccuracyScore}>{subject.accuracy}%</Text>
-                    <Text style={styles.subjectAccuracyLabel}>Precisao</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-
             {/* Provas oficiais */}
-            <View style={{ gap: 12 }}>
-              <View style={{ gap: 4 }}>
-                <Text style={styles.sectionTitle}>Provas e gabaritos oficiais</Text>
-                <Text style={styles.subtitle}>Veja os PDFs do ENEM direto por aqui.</Text>
+            <View
+              style={[styles.panelCard, { gap: 12 }]}
+              onLayout={(e) => {
+                resourcesOffset.current = e.nativeEvent.layout.y;
+              }}
+            >
+              <View style={styles.sectionHeader}>
+                <View style={{ gap: 4 }}>
+                  <Text style={styles.sectionTitle}>Provas e gabaritos oficiais</Text>
+                  <Text style={styles.subtitle}>Veja os PDFs do ENEM direto por aqui.</Text>
+                </View>
+                <View style={styles.sectionTag}>
+                  <Ionicons name="download-outline" size={14} color="#0B1224" />
+                  <Text style={styles.sectionTagText}>PDF</Text>
+                </View>
               </View>
 
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.examChips}>
@@ -259,12 +445,83 @@ export default function QuizScreen() {
                 ))}
               </ScrollView>
 
+              <View style={styles.filterSurface}>
+                <View style={[styles.filterRow, !isTablet && styles.filterRowStacked]}>
+                  <View style={styles.searchBox}>
+                    <Ionicons name="search" size={16} color="rgba(255,255,255,0.7)" />
+                    <TextInput
+                      placeholder="Filtrar por ano ou caderno"
+                      placeholderTextColor="rgba(255,255,255,0.55)"
+                      value={yearQuery}
+                      onChangeText={setYearQuery}
+                      style={styles.searchInput}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.clearBtn, !filtersActive && styles.btnDisabled]}
+                    onPress={() => {
+                      setYearQuery('');
+                      setColorFilter('none');
+                      setResourceFilter('all');
+                    }}
+                    disabled={!filtersActive}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="close-circle" size={14} color="#0B1224" />
+                    <Text style={styles.clearBtnText}>Limpar filtros</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={[styles.filterChips, styles.filterWrap]}>
+                  {(
+                    [
+                      { id: 'day1', label: 'Dia 1' },
+                      { id: 'day2', label: 'Dia 2' },
+                      { id: 'gaba', label: 'Gabarito' },
+                    ] as const
+                  ).map((opt) => {
+                    const isActive = resourceFilter === opt.id;
+                    return (
+                      <TouchableOpacity
+                        key={opt.id}
+                        style={[styles.filterChip, isActive && styles.filterChipActive]}
+                        onPress={() => setResourceFilter(isActive ? 'all' : opt.id)}
+                      >
+                        <Text style={styles.filterChipText}>{opt.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <View style={[styles.filterChips, styles.filterWrap]}>
+                  {COLOR_OPTIONS.map((opt) => {
+                    const isActive = colorFilter === opt.id;
+                    const bg = isActive ? `${opt.color}33` : 'rgba(255,255,255,0.08)';
+                    const border = isActive ? opt.color : 'rgba(255,255,255,0.2)';
+                    const textColor = isActive ? opt.text || '#FFFFFF' : '#FFFFFF';
+                    return (
+                      <TouchableOpacity
+                        key={opt.id}
+                        style={[styles.filterChip, { backgroundColor: bg, borderColor: border }]}
+                        onPress={() => setColorFilter(isActive ? 'none' : opt.id)}
+                      >
+                        <Text style={[styles.filterChipText, { color: textColor }]}>{opt.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
               {activeResources.length === 0 ? (
                 <Text style={styles.emptyText}>
                   Adicione recursos (kind = resource) no Supabase para o exame {selectedExam}.
                 </Text>
+              ) : displayResources.length === 0 && filtersActive ? (
+                <Text style={styles.emptyText}>
+                  Nenhum PDF bate com os filtros atuais. Limpe os filtros para ver tudo.
+                </Text>
               ) : yearsAvailable.length === 0 ? (
-                <Text style={styles.emptyText}>Nao encontramos provas com ano no titulo.</Text>
+                <Text style={styles.emptyText}>
+                  Nao encontramos ano no titulo usando ENEM 2025 ou qualquer 4 digitos.
+                </Text>
               ) : (
                 <View style={{ gap: 10 }}>
                   {yearsAvailable.map((year) => {
@@ -322,6 +579,169 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
   },
+  heroCard: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    flexDirection: 'row',
+    gap: 18,
+    alignItems: 'stretch',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+  },
+  heroLeft: {
+    flex: 1,
+    gap: 10,
+    minWidth: 260,
+  },
+  heroBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#A5E4FF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  heroBadgeText: {
+    color: '#0B1224',
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    fontSize: 12,
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
+  },
+  heroSubtitle: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 14,
+    lineHeight: 20,
+    maxWidth: 560,
+  },
+  heroActions: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  primaryBtn: {
+    backgroundColor: '#A5E4FF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  primaryBtnText: {
+    color: '#0B1224',
+    fontWeight: '800',
+  },
+  btnDisabled: {
+    opacity: 0.55,
+  },
+  secondaryBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.24)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  secondaryBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  heroChips: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  heroChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  heroChipText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  heroStatsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+    minWidth: 220,
+    justifyContent: 'flex-end',
+    flex: 1,
+  },
+  heroStatsGridStacked: {
+    width: '100%',
+    justifyContent: 'flex-start',
+  },
+  statCard: {
+    flexGrow: 1,
+    minWidth: 110,
+    maxWidth: 140,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    gap: 8,
+  },
+  statIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    backgroundColor: '#A5E4FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statValue: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  statLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  panelCard: {
+    gap: 14,
+    padding: 16,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  sectionTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#A5E4FF',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  sectionTagText: {
+    color: '#0B1224',
+    fontWeight: '800',
+    fontSize: 12,
+  },
   loadingBox: {
     flexDirection: 'row',
     gap: 10,
@@ -344,24 +764,26 @@ const styles = StyleSheet.create({
   },
   maxWidth: {
     width: '100%',
-    maxWidth: 1000,
+    maxWidth: 1080,
     alignSelf: 'center',
     gap: 24,
   },
   examCard: {
-    width: 140,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    width: 180,
     borderRadius: 18,
     padding: 14,
-    gap: 6,
+    gap: 10,
+    borderWidth: 1,
   },
   examIcon: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  examCardBody: {
+    gap: 4,
   },
   examTitle: {
     color: '#FFFFFF',
@@ -372,11 +794,23 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontSize: 12,
   },
+  examBar: {
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  examBarFill: {
+    height: '100%',
+    borderRadius: 10,
+  },
   questionCard: {
     backgroundColor: 'rgba(15,23,42,0.3)',
     borderRadius: 22,
     padding: 20,
     gap: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   questionHeader: {
     flexDirection: 'row',
@@ -412,6 +846,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 22,
   },
+  splitRow: {
+    width: '100%',
+    gap: 16,
+  },
+  splitRowWide: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  splitCol: {
+    flex: 1,
+  },
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -422,9 +867,16 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   optionLetter: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    width: 20,
+    color: '#0B1224',
+    fontWeight: '800',
+    fontSize: 12,
+    width: 28,
+    height: 28,
+    lineHeight: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(165,228,255,0.9)',
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   optionText: {
     color: '#FFFFFF',
@@ -447,13 +899,32 @@ const styles = StyleSheet.create({
   emptyText: {
     color: 'rgba(255,255,255,0.7)',
   },
+  emptyPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  subjectPanel: {
+    gap: 12,
+    padding: 16,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(0,0,0,0.18)',
+  },
   subjectCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    gap: 10,
   },
   subjectName: {
     color: '#FFFFFF',
@@ -476,10 +947,28 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontSize: 11,
   },
+  progressTrack: {
+    height: 6,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#A5E4FF',
+    borderRadius: 6,
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  sectionHeaderText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
   },
   sectionAction: {
     flexDirection: 'row',
@@ -532,6 +1021,84 @@ const styles = StyleSheet.create({
   examChipText: {
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  filterSurface: {
+    width: '100%',
+    padding: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.14)',
+    gap: 10,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    flexWrap: 'wrap',
+    width: '100%',
+  },
+  filterRowStacked: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 12,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    minWidth: 200,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  searchInput: { color: '#FFFFFF', flex: 1, paddingVertical: 0 },
+  filterChips: { flexDirection: 'row', gap: 8, paddingLeft: 4 },
+  filterWrap: {
+    flexWrap: 'wrap',
+    gap: 8,
+    rowGap: 8 as any,
+    flexGrow: 1,
+    width: '100%',
+  },
+  filterChipText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  clearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#A5E4FF',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  clearBtnText: {
+    color: '#0B1224',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  fullWidth: { width: '100%' },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  filterChipActive: {
+    borderColor: '#A5E4FF',
+    backgroundColor: 'rgba(165,228,255,0.22)',
   },
   yearTitle: {
     color: '#FFFFFF',
