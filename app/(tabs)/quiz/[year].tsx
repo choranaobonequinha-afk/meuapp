@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -17,6 +17,13 @@ export default function QuizYearScreen() {
   const [filter, setFilter] = useState<'all' | 'day1' | 'day2' | 'gaba' | 'prova'>('all');
   const [colorFilter, setColorFilter] = useState<'none' | 'azul' | 'amarelo' | 'verde' | 'branco' | 'cinza'>('none');
   const [query, setQuery] = useState('');
+  const scrollRef = useRef<ScrollView>(null);
+  const lastScrollY = useRef(0);
+  const listOffset = useRef(0);
+  const contentHeightRef = useRef(0);
+  const containerHeightRef = useRef(0);
+  const pendingFreezeRef = useRef(false);
+  const freezeOffsetRef = useRef(0);
 
   const COLOR_BY_LABEL: Record<string, string> = {
     azul: '#2563EB',
@@ -35,6 +42,17 @@ export default function QuizYearScreen() {
       { id: 'branco', label: 'Branco', color: '#E5E7EB', text: '#0F172A' },
       { id: 'cinza', label: 'Cinza', color: '#9CA3AF', text: '#0F172A' },
     ];
+
+  const rememberScroll = (y: number) => {
+    lastScrollY.current = y;
+  };
+
+  const freezeToList = () => {
+    const currentY = lastScrollY.current ?? 0;
+    const sectionTop = listOffset.current ?? 0;
+    freezeOffsetRef.current = Math.max(currentY - sectionTop, 0);
+    pendingFreezeRef.current = true;
+  };
 
     const filtered = useMemo(() => {
     const result: Record<string, ReturnType<typeof useStudyTracks>['resources']> = {};
@@ -115,9 +133,31 @@ export default function QuizYearScreen() {
         pointerEvents="none"
       />
       <ScrollView
+        ref={scrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 140 }]}
         showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onLayout={(event) => {
+          containerHeightRef.current = event.nativeEvent.layout.height;
+        }}
+        onContentSizeChange={(_w, h) => {
+          contentHeightRef.current = h;
+          if (pendingFreezeRef.current) {
+            const containerH = containerHeightRef.current || 0;
+            const sectionTop = listOffset.current ?? 0;
+            const maxY = Math.max(h - containerH, 0);
+            const target = Math.min(sectionTop + freezeOffsetRef.current, maxY);
+            pendingFreezeRef.current = false;
+            requestAnimationFrame(() => {
+              scrollRef.current?.scrollTo({ y: target, animated: false });
+              lastScrollY.current = target;
+            });
+          }
+        }}
+        onScroll={(event) => rememberScroll(event.nativeEvent.contentOffset.y)}
+        onMomentumScrollEnd={(event) => rememberScroll(event.nativeEvent.contentOffset.y)}
+        onScrollEndDrag={(event) => rememberScroll(event.nativeEvent.contentOffset.y)}
       >
         <View style={styles.maxWidth}>
           <View style={styles.topRow}>
@@ -161,6 +201,12 @@ export default function QuizYearScreen() {
             </View>
           </View>
 
+          <View
+            style={{ width: '100%' }}
+            onLayout={(e) => {
+              listOffset.current = e.nativeEvent.layout.y;
+            }}
+          >
           <View style={styles.filterRow}>
             <View style={styles.searchBox}>
               <Ionicons name="search" size={16} color={theme.textMuted} />
@@ -185,7 +231,10 @@ export default function QuizYearScreen() {
                   <TouchableOpacity
                     key={opt.id}
                     style={[styles.filterChip, isActive && styles.filterChipActive]}
-                    onPress={() => setFilter(isActive ? 'all' : opt.id)}
+                    onPress={() => {
+                      freezeToList();
+                      setFilter(isActive ? 'all' : opt.id);
+                    }}
                   >
                     <Text style={styles.filterChipText}>{opt.label}</Text>
                   </TouchableOpacity>
@@ -202,7 +251,10 @@ export default function QuizYearScreen() {
                   <TouchableOpacity
                     key={opt.id}
                     style={[styles.filterChip, { backgroundColor: bg, borderColor: border }]}
-                    onPress={() => setColorFilter(isActive ? 'none' : opt.id)}
+                    onPress={() => {
+                      freezeToList();
+                      setColorFilter(isActive ? 'none' : opt.id);
+                    }}
                   >
                     <Text style={[styles.filterChipText, { color: textColor }]}>{opt.label}</Text>
                   </TouchableOpacity>
@@ -299,6 +351,7 @@ export default function QuizYearScreen() {
               </View>
             ))
           )}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

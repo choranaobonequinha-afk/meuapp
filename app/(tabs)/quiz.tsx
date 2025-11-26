@@ -47,7 +47,10 @@ export default function QuizScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const resourcesOffset = useRef(0);
   const lastScrollY = useRef(0);
-  const freezeScrollTo = useRef<number | null>(null);
+  const contentHeightRef = useRef(0);
+  const containerHeightRef = useRef(0);
+  const pendingFreezeRef = useRef(false);
+  const freezeOffsetRef = useRef(0);
   const hasQuestions = questions.length > 0;
   const [currentQuestion, setCurrentQuestion] = useState(randomQuestion || null);
   const [selected, setSelected] = useState<number | null>(null);
@@ -175,15 +178,17 @@ export default function QuizScreen() {
     });
   };
 
-  // Restaura a posição ao alterar filtros/chips
-  useEffect(() => {
-    if (freezeScrollTo.current == null) return;
-    const y = freezeScrollTo.current;
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ y, animated: false });
-      freezeScrollTo.current = null;
-    });
-  }, [resourceFilter, colorFilter, yearQuery, selectedExam]);
+  const rememberScroll = (y: number) => {
+    lastScrollY.current = y;
+  };
+
+  const freezeToResources = () => {
+    const currentY = lastScrollY.current ?? 0;
+    const sectionTop = resourcesOffset.current ?? 0;
+    freezeOffsetRef.current = Math.max(currentY - sectionTop, 0);
+    pendingFreezeRef.current = true;
+  };
+  
 
   const yearsAvailable = useMemo(() => {
     const set = new Set<string>();
@@ -236,10 +241,30 @@ export default function QuizScreen() {
             paddingTop: 16,
             alignItems: 'center',
           }}
+          scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
-          onScroll={(event) => {
-            lastScrollY.current = event.nativeEvent.contentOffset.y;
+          onLayout={(event) => {
+            containerHeightRef.current = event.nativeEvent.layout.height;
           }}
+          onContentSizeChange={(_w, h) => {
+            contentHeightRef.current = h;
+            if (pendingFreezeRef.current) {
+              const sectionTop = resourcesOffset.current ?? 0;
+              const containerH = containerHeightRef.current || 0;
+              const maxY = Math.max(h - containerH, 0);
+              const target = Math.min(sectionTop + freezeOffsetRef.current, maxY);
+              pendingFreezeRef.current = false;
+              requestAnimationFrame(() => {
+                scrollRef.current?.scrollTo({ y: target, animated: false });
+                lastScrollY.current = target;
+              });
+            }
+          }}
+          onScroll={(event) => {
+            rememberScroll(event.nativeEvent.contentOffset.y);
+          }}
+          onMomentumScrollEnd={(event) => rememberScroll(event.nativeEvent.contentOffset.y)}
+          onScrollEndDrag={(event) => rememberScroll(event.nativeEvent.contentOffset.y)}
         >
           <View style={styles.maxWidth}>
             <View style={styles.heroCard}>
@@ -504,7 +529,7 @@ export default function QuizScreen() {
                   <TouchableOpacity
                     style={[styles.clearBtn, !filtersActive && styles.btnDisabled]}
                     onPress={() => {
-                      freezeScrollTo.current = lastScrollY.current;
+                      freezeToResources();
                       setYearQuery('');
                       setColorFilter('none');
                       setResourceFilter('all');
@@ -530,7 +555,7 @@ export default function QuizScreen() {
                           key={opt.id}
                           style={[styles.filterChip, isActive && styles.filterChipActive]}
                           onPress={() => {
-                            freezeScrollTo.current = lastScrollY.current;
+                            freezeToResources();
                             setResourceFilter(isActive ? 'all' : opt.id);
                           }}
                         >
@@ -550,7 +575,7 @@ export default function QuizScreen() {
                         key={opt.id}
                         style={[styles.filterChip, { backgroundColor: bg, borderColor: border }]}
                         onPress={() => {
-                          freezeScrollTo.current = lastScrollY.current;
+                          freezeToResources();
                           setColorFilter(isActive ? 'none' : opt.id);
                         }}
                       >
