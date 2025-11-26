@@ -25,8 +25,14 @@ export default function TrilhaScreen() {
         >
           <View style={styles.maxWidth}>
             <View style={styles.header}>
-              <Text style={styles.title}>Trilhas inteligentes</Text>
-              <Text style={styles.subtitle}>Sequencias curtas alimentadas pelos dados reais do Supabase.</Text>
+              <View>
+                <Text style={styles.title}>Trilhas inteligentes</Text>
+                <Text style={styles.subtitle}>Rotas curtas com PDFs, aulas e gabaritos organizados.</Text>
+              </View>
+              <View style={styles.headerBadge}>
+                <Ionicons name="sparkles-outline" size={16} color="#0B1224" />
+                <Text style={styles.headerBadgeText}>ENEM</Text>
+              </View>
             </View>
 
             {loading ? (
@@ -47,26 +53,36 @@ export default function TrilhaScreen() {
               <>
                 {heroTrack ? (
                   <TouchableOpacity
-                    style={[styles.heroCard, { backgroundColor: heroTrack.color_hex || '#4F46E5' }]}
+                    style={styles.heroCard}
                     activeOpacity={0.9}
                     onPress={() => router.push({ pathname: '/(tabs)/trilhas/[id]', params: { id: heroTrack.slug } })}
                   >
-                    <View style={styles.heroBadge}>
-                      <Ionicons name="map-outline" size={18} color="#FFFFFF" />
-                      <Text style={styles.heroBadgeText}>Trilha em destaque</Text>
-                    </View>
-                    <Text style={styles.heroTitle}>{heroTrack.title}</Text>
-                    <Text style={styles.heroDescription} numberOfLines={2}>
-                      {heroTrack.description || 'Plano dinamico com recursos oficiais.'}
-                    </Text>
-                    <View style={styles.heroMeta}>
-                      <View>
-                        <Text style={styles.heroMetaValue}>{heroTrack.exam?.toUpperCase() || 'GERAL'}</Text>
-                        <Text style={styles.heroMetaLabel}>Prova alvo</Text>
+                    <View
+                      style={[
+                        styles.heroCardSurface,
+                        {
+                          backgroundColor: '#2563EB',
+                          borderColor: (heroTrack.color_hex || '#93C5FD'),
+                        },
+                      ]}
+                    >
+                      <View style={[styles.heroBadge, { backgroundColor: (heroTrack.color_hex || '#6366F1') + '22' }]}>
+                        <Ionicons name="map-outline" size={18} color="#FFFFFF" />
+                        <Text style={styles.heroBadgeText}>Trilha em destaque</Text>
                       </View>
-                      <View>
-                        <Text style={styles.heroMetaValue}>{heroTrack.items.length}</Text>
-                        <Text style={styles.heroMetaLabel}>Etapas</Text>
+                      <Text style={styles.heroTitle}>{heroTrack.title}</Text>
+                      <Text style={styles.heroDescription} numberOfLines={2}>
+                        {heroTrack.description || 'Plano dinamico com recursos oficiais.'}
+                      </Text>
+                      <View style={styles.heroMeta}>
+                        <View>
+                          <Text style={styles.heroMetaValue}>{heroTrack.exam?.toUpperCase() || 'GERAL'}</Text>
+                          <Text style={styles.heroMetaLabel}>Prova alvo</Text>
+                        </View>
+                        <View>
+                          <Text style={styles.heroMetaValue}>{heroTrack.items.length}</Text>
+                          <Text style={styles.heroMetaLabel}>Etapas</Text>
+                        </View>
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -77,18 +93,22 @@ export default function TrilhaScreen() {
                     <TouchableOpacity
                       key={track.id}
                       style={styles.trackCard}
+                      activeOpacity={0.88}
                       onPress={() => router.push({ pathname: '/(tabs)/trilhas/[id]', params: { id: track.slug } })}
                     >
-                      <View style={[styles.trackIcon, { backgroundColor: track.color_hex + '33' }]}>
+                      <View style={[styles.trackIcon, { backgroundColor: `${track.color_hex}22`, borderColor: `${track.color_hex}44` }]}>
                         <Ionicons name="walk-outline" size={20} color={track.color_hex} />
                       </View>
-                      <View style={{ flex: 1 }}>
+                      <View style={{ flex: 1, gap: 4 }}>
                         <Text style={styles.trackName}>{track.title}</Text>
                         <Text style={styles.trackInfo}>
-                          {`${track.exam?.toUpperCase() || 'EXAME'} - ${track.items.length} passos`}
+                          {`${track.exam?.toUpperCase() || 'EXAME'} • ${track.items.length} passos`}
                         </Text>
                       </View>
-                      <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.7)" />
+                      <View style={styles.trackBadge}>
+                        <Ionicons name="time-outline" size={14} color="#0B1224" />
+                        <Text style={styles.trackBadgeText}>Pronto em minutos</Text>
+                      </View>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -117,6 +137,10 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: 6,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
   },
   title: {
     fontSize: 26,
@@ -127,6 +151,22 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
     lineHeight: 20,
+    maxWidth: 520,
+  },
+  headerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#A5E4FF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  headerBadgeText: {
+    color: '#0B1224',
+    fontWeight: '800',
+    fontSize: 12,
+    letterSpacing: 0.3,
   },
   loadingBox: {
     flexDirection: 'row',
@@ -145,8 +185,15 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     borderRadius: 28,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  heroCardSurface: {
     padding: 24,
     gap: 12,
+    borderRadius: 28,
+    borderWidth: 1,
   },
   heroBadge: {
     flexDirection: 'row',
@@ -170,6 +217,7 @@ const styles = StyleSheet.create({
   heroDescription: {
     color: 'rgba(255,255,255,0.85)',
     fontSize: 14,
+    lineHeight: 20,
   },
   heroMeta: {
     flexDirection: 'row',
@@ -206,6 +254,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
   },
   trackName: {
     color: '#FFFFFF',
@@ -215,6 +264,20 @@ const styles = StyleSheet.create({
   trackInfo: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 12,
+  },
+  trackBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#A5E4FF',
+  },
+  trackBadgeText: {
+    color: '#0B1224',
+    fontSize: 12,
+    fontWeight: '800',
   },
   section: {
     gap: 12,

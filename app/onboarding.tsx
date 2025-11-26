@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeColors } from '../store/themeStore';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,9 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 const { width } = Dimensions.get('window');
 
 const exams = [
-  { id: 'enem', name: 'ENEM', description: 'Exame Nacional do Ensino Médio', color: '#4F46E5', icon: '🎯' },
-  { id: 'ufpr', name: 'UFPR', description: 'Universidade Federal do Paraná', color: '#10B981', icon: '🏛️' },
-  { id: 'utfpr', name: 'UTFPR', description: 'Universidade Tecnológica Federal do Paraná', color: '#F59E0B', icon: '⚡' },
+  { id: 'enem', name: 'ENEM', description: 'Exame Nacional do Ensino Medio', color: '#4F46E5', icon: 'target', highlight: true },
+  { id: 'ufpr', name: 'UFPR', description: 'Universidade Federal do Parana', color: '#10B981', icon: 'school-outline' },
+  { id: 'utfpr', name: 'UTFPR', description: 'Universidade Tecnologica Federal do Parana', color: '#F59E0B', icon: 'book-outline' },
 ];
 
 const subjects = [
@@ -114,33 +113,45 @@ export default function OnboardingFlow() {
       case 3:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.question}>Qual vestibular você vai prestar?</Text>
+            <Text style={styles.question}>Qual vestibular voce vai prestar?</Text>
             <Text style={styles.subtitle}>Escolha a prova principal para personalizarmos seus estudos</Text>
             <View style={styles.examsGrid}>
-              {exams.map((exam) => (
-                <TouchableOpacity
-                  key={exam.id}
-                  style={[
-                    styles.examButton,
-                    formData.exam === exam.id && { backgroundColor: exam.color }
-                  ]}
-                  onPress={() => updateFormData('exam', exam.id)}
-                >
-                  <Text style={styles.examIcon}>{exam.icon}</Text>
-                  <Text style={[
-                    styles.examName,
-                    formData.exam === exam.id && styles.examNameSelected
-                  ]}>
-                    {exam.name}
-                  </Text>
-                  <Text style={[
-                    styles.examDescription,
-                    formData.exam === exam.id && styles.examDescriptionSelected
-                  ]}>
-                    {exam.description}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {exams.map((exam) => {
+                const selected = formData.exam === exam.id;
+                return (
+                  <TouchableOpacity
+                    key={exam.id}
+                    style={[
+                      styles.examCard,
+                      { borderColor: `${exam.color}33` },
+                      selected && { borderColor: exam.color, backgroundColor: `${exam.color}12` },
+                      exam.highlight && styles.examFeatured,
+                    ]}
+                    onPress={() => updateFormData('exam', exam.id)}
+                    activeOpacity={0.92}
+                  >
+                    <View style={[styles.examIconWrap, { backgroundColor: `${exam.color}22` }]}>
+                      <Ionicons name={exam.icon as any} size={18} color={exam.color} />
+                    </View>
+                    <View style={styles.examTextBlock}>
+                      <View style={styles.examTitleRow}>
+                        <Text style={[styles.examName, selected && { color: exam.color }]}>{exam.name}</Text>
+                        {exam.highlight ? (
+                          <Text style={[styles.examBadge, { color: exam.color, backgroundColor: `${exam.color}24` }]}>
+                            Principal
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Text style={styles.examDescription}>{exam.description}</Text>
+                    </View>
+                    <Ionicons
+                      name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={18}
+                      color={selected ? exam.color : '#CBD5E1'}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
             </View>
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.secondaryButton} onPress={prevStep}>
@@ -151,7 +162,7 @@ export default function OnboardingFlow() {
                 onPress={nextStep}
                 disabled={!formData.exam}
               >
-                <Text style={styles.buttonText}>Próximo</Text>
+                <Text style={styles.buttonText}>Proximo</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -309,12 +320,7 @@ export default function OnboardingFlow() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={theme.gradient}
-        style={styles.container}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
+      <View style={[styles.container, { backgroundColor: '#0B1224' }]}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={prevStep}>
@@ -340,7 +346,7 @@ export default function OnboardingFlow() {
         >
           {renderStep()}
         </ScrollView>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -445,37 +451,54 @@ const styles = StyleSheet.create({
   },
   examsGrid: {
     width: '100%',
-    gap: 16,
-    marginBottom: 40,
+    gap: 14,
+    marginBottom: 32,
   },
-  examButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20,
-    padding: 24,
+  examCard: {
+    backgroundColor: '#0B1224',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#111827',
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
+    gap: 12,
+    width: '100%',
+    alignSelf: 'stretch',
   },
-  examIcon: {
-    fontSize: 40,
-    marginBottom: 12,
+  examFeatured: {
+    borderWidth: 1.5,
+    borderColor: '#6366F1',
+    backgroundColor: '#0B1224',
   },
+  examIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#111827',
+  },
+  examTextBlock: { flex: 1, gap: 4 },
+  examTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' },
   examName: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     color: 'white',
-    marginBottom: 8,
+    flexShrink: 1,
   },
-  examNameSelected: {
-    color: 'white',
+  examBadge: {
+    fontSize: 12,
+    fontWeight: '700',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   examDescription: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    textAlign: 'center',
-  },
-  examDescriptionSelected: {
-    color: 'white',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
+    lineHeight: 18,
+    flexShrink: 1,
   },
   levelsGrid: {
     width: '100%',

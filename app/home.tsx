@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../components/ui/Button';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { useT } from '../lib/i18n';
 
 const isWeb = Platform.OS === 'web';
 const heroCardShadow: ViewStyle = isWeb
@@ -55,6 +57,7 @@ type ProfileRow = {
 
 export default function HomeScreen() {
   const { user, signOut } = useAuthStore();
+  const t = useT();
   const [rows, setRows] = useState<ProfileRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -114,32 +117,37 @@ export default function HomeScreen() {
             <Text style={styles.avatarText}>{initial}</Text>
           </View>
           <View style={styles.cardInfo}>
-            <Text style={styles.cardTitle}>{email}</Text>
-            <View style={styles.metaRow}>
-              <Ionicons name="mail-outline" size={14} color="#6B7280" />
-              <Text style={styles.cardSubtitle}>{item.id}</Text>
+              <Text style={styles.cardTitle}>{email}</Text>
+              <View style={styles.metaRow}>
+                <Ionicons name="mail-outline" size={14} color="#6B7280" />
+                <Text style={styles.cardSubtitle}>{item.id}</Text>
+              </View>
             </View>
           </View>
+          <View style={styles.metaRow}>
+            <Ionicons name="time-outline" size={14} color="#6B7280" />
+            <Text style={styles.cardSubtitle}>{createdAt}</Text>
+          </View>
         </View>
-        <View style={styles.metaRow}>
-          <Ionicons name="time-outline" size={14} color="#6B7280" />
-          <Text style={styles.cardSubtitle}>{createdAt}</Text>
-        </View>
-      </View>
-    );
-  };
+      );
+    };
 
   return (
     <LinearGradient colors={['#EEF2FF', '#FDF2F8']} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.heroCard}>
-          <View style={styles.heroBadge}>
-            <Ionicons name="sparkles-outline" size={16} color="#4338CA" />
-            <Text style={styles.heroBadgeText}>Smoke Test Supabase</Text>
-          </View>
-          <Text style={styles.heroTitle}>Ola, {user?.email ?? 'visitante'} :)</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.langRow}>
+        <LanguageSwitcher />
+      </View>
+      <View style={styles.heroCard}>
+        <View style={styles.heroBadge}>
+          <Ionicons name="sparkles-outline" size={16} color="#4338CA" />
+          <Text style={styles.heroBadgeText}>Smoke Test Supabase</Text>
+        </View>
+          <Text style={styles.heroTitle}>{t('hero_title') || 'Olá'}, {user?.email ?? 'visitante'} :)</Text>
           <Text style={styles.heroSubtitle}>
-            Acompanhe os registros recentes da tabela <Text style={styles.bold}>profiles</Text> e valide sua integracao rapidamente.
+            {t('hero_subtitle') ?? (
+              <>Acompanhe os registros recentes da tabela <Text style={styles.bold}>profiles</Text> e valide sua integracao rapidamente.</>
+            )}
           </Text>
 
           <View style={styles.statsRow}>
@@ -149,8 +157,8 @@ export default function HomeScreen() {
               <Text style={styles.statHint}>limite 10</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Status</Text>
-              <Text style={styles.statValue}>{errorMessage ? 'Erro' : loading ? 'Carregando' : 'Online'}</Text>
+              <Text style={styles.statLabel}>{t('home_stats_status') ?? 'Status'}</Text>
+              <Text style={styles.statValue}>{errorMessage ? 'Erro' : loading ? (t('home_loading') ?? 'Carregando') : 'Online'}</Text>
               <Text style={styles.statHint}>{formattedLastUpdated}</Text>
             </View>
           </View>
@@ -158,11 +166,11 @@ export default function HomeScreen() {
           <View style={styles.quickActions}>
             <TouchableOpacity style={styles.actionButton} onPress={() => fetchProfiles({ showLoader: true })}>
               <Ionicons name="refresh-outline" size={18} color="#4338CA" />
-              <Text style={styles.actionText}>Atualizar</Text>
+              <Text style={styles.actionText}>{t('cta_refresh') ?? 'Atualizar'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton} onPress={signOut}>
               <Ionicons name="log-out-outline" size={18} color="#4338CA" />
-              <Text style={styles.actionText}>Sair</Text>
+              <Text style={styles.actionText}>{t('cta_signout') ?? 'Sair'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -170,8 +178,8 @@ export default function HomeScreen() {
         <View style={styles.listSection}>
           <View style={styles.sectionHeader}>
             <View>
-              <Text style={styles.sectionTitle}>Ultimos registros</Text>
-              <Text style={styles.sectionSubtitle}>Pull to refresh ou use o botao acima</Text>
+              <Text style={styles.sectionTitle}>{t('home_list_title') ?? 'Ultimos registros'}</Text>
+              <Text style={styles.sectionSubtitle}>{t('home_list_subtitle') ?? 'Pull to refresh ou use o botao acima'}</Text>
             </View>
             <Ionicons name="document-text-outline" size={20} color="#4338CA" />
           </View>
@@ -179,14 +187,14 @@ export default function HomeScreen() {
           {loading ? (
             <View style={styles.loader}>
               <ActivityIndicator size="large" color="#6366F1" />
-              <Text style={styles.loaderText}>Carregando dados da tabela &quot;profiles&quot;...</Text>
+              <Text style={styles.loaderText}>{t('home_loading') ?? 'Carregando dados da tabela "profiles"...'}</Text>
             </View>
           ) : errorMessage ? (
             <View style={styles.errorBox}>
               <Ionicons name="alert-circle-outline" size={20} color="#B91C1C" />
               <View style={styles.errorTextWrapper}>
-                <Text style={styles.errorTitle}>Algo deu errado</Text>
-                <Text style={styles.errorText}>{errorMessage}</Text>
+                <Text style={styles.errorTitle}>{t('home_error_title') ?? 'Algo deu errado'}</Text>
+                <Text style={styles.errorText}>{errorMessage ?? t('home_error_text') ?? 'Erro'}</Text>
               </View>
             </View>
           ) : (
@@ -227,6 +235,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingBottom: 20,
+  },
+  langRow: {
+    alignItems: 'flex-end',
+    marginBottom: 12,
   },
   heroCard: {
     backgroundColor: '#FFFFFF',

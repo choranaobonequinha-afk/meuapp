@@ -22,8 +22,8 @@ export default function QuizYearScreen() {
   const listOffset = useRef(0);
   const contentHeightRef = useRef(0);
   const containerHeightRef = useRef(0);
-  const pendingFreezeRef = useRef(false);
-  const freezeOffsetRef = useRef(0);
+  const freezeYRef = useRef<number | null>(null);
+  const freezeGapRef = useRef(0);
 
   const COLOR_BY_LABEL: Record<string, string> = {
     azul: '#2563EB',
@@ -49,10 +49,30 @@ export default function QuizYearScreen() {
 
   const freezeToList = () => {
     const currentY = lastScrollY.current ?? 0;
-    const sectionTop = listOffset.current ?? 0;
-    freezeOffsetRef.current = Math.max(currentY - sectionTop, 0);
-    pendingFreezeRef.current = true;
+    const containerH = containerHeightRef.current || 0;
+    const maxY = Math.max(contentHeightRef.current - containerH, 0);
+    freezeGapRef.current = Math.max(maxY - currentY, 0);
+    freezeYRef.current = currentY;
   };
+
+  const restoreIfPending = () => {
+    if (freezeYRef.current == null) return;
+    const targetY = freezeYRef.current;
+    const gap = freezeGapRef.current;
+    freezeYRef.current = null;
+    freezeGapRef.current = 0;
+    requestAnimationFrame(() => {
+      const containerH = containerHeightRef.current || 0;
+      const maxY = Math.max(contentHeightRef.current - containerH, 0);
+      const target = Math.max(0, Math.min(maxY - gap, maxY));
+      scrollRef.current?.scrollTo({ y: target, animated: false });
+      lastScrollY.current = target;
+    });
+  };
+
+  useEffect(() => {
+    restoreIfPending();
+  }, [filter, colorFilter, query, resources.length, year, exam]);
 
     const filtered = useMemo(() => {
     const result: Record<string, ReturnType<typeof useStudyTracks>['resources']> = {};
@@ -143,17 +163,7 @@ export default function QuizYearScreen() {
         }}
         onContentSizeChange={(_w, h) => {
           contentHeightRef.current = h;
-          if (pendingFreezeRef.current) {
-            const containerH = containerHeightRef.current || 0;
-            const sectionTop = listOffset.current ?? 0;
-            const maxY = Math.max(h - containerH, 0);
-            const target = Math.min(sectionTop + freezeOffsetRef.current, maxY);
-            pendingFreezeRef.current = false;
-            requestAnimationFrame(() => {
-              scrollRef.current?.scrollTo({ y: target, animated: false });
-              lastScrollY.current = target;
-            });
-          }
+          restoreIfPending();
         }}
         onScroll={(event) => rememberScroll(event.nativeEvent.contentOffset.y)}
         onMomentumScrollEnd={(event) => rememberScroll(event.nativeEvent.contentOffset.y)}

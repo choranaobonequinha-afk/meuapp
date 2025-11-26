@@ -14,14 +14,6 @@ export default function TrilhaDetalhe() {
   const { trackMap, loading, error } = useStudyTracks();
   const trilha = id ? trackMap.get(id) : undefined;
   const accent = trilha?.color_hex || '#4F46E5';
-  const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/(tabs)/trilha');
-    }
-  };
-
   const lessons = useMemo(
     () => trilha?.items.filter((item) => item.kind === 'lesson') ?? [],
     [trilha?.items]
@@ -52,19 +44,11 @@ export default function TrilhaDetalhe() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 40, alignItems: 'center' }}>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#DCEAFE' }]}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120, alignItems: 'center' }} showsVerticalScrollIndicator={false}>
         <View style={styles.maxWidth}>
-          <LinearGradient
-            colors={[accent, '#111827']}
-            style={styles.hero}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
+          <View style={[styles.hero, { backgroundColor: '#2563EB', borderColor: '#93C5FD' }]}>
             <View style={styles.heroHead}>
-              <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                <Ionicons name="chevron-back" size={18} color="#0B1224" />
-              </TouchableOpacity>
               <Text style={styles.heroTitle}>{trilha.title}</Text>
             </View>
             <Text style={styles.heroDescription}>{trilha.description || 'Sequencia de estudo personalizada.'}</Text>
@@ -77,7 +61,7 @@ export default function TrilhaDetalhe() {
                 )
               )}
             </View>
-          </LinearGradient>
+          </View>
 
           <View style={styles.cardSurface}>
             <View style={styles.sectionHeader}>
@@ -89,11 +73,7 @@ export default function TrilhaDetalhe() {
             </View>
             <View style={styles.stepGrid}>
               {lessons.map((item, index) => (
-                <LinearGradient
-                  key={item.id}
-                  colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.04)']}
-                  style={styles.stepCard}
-                >
+                <View key={item.id} style={styles.stepCard}>
                   <View style={[styles.stepBadge, { backgroundColor: accent + '22', borderColor: accent + '55' }]}>
                     <Text style={[styles.stepBadgeText, { color: accent }]}>{index + 1}</Text>
                   </View>
@@ -112,7 +92,7 @@ export default function TrilhaDetalhe() {
                     <Ionicons name="play-outline" size={16} color="#FFFFFF" />
                     <Text style={styles.stepActionText}>Ver aula</Text>
                   </TouchableOpacity>
-                </LinearGradient>
+                </View>
               ))}
               {lessons.length === 0 ? <Text style={styles.emptyText}>Nenhuma aula listada.</Text> : null}
             </View>
@@ -133,20 +113,23 @@ export default function TrilhaDetalhe() {
                 {resources.map((resource) => (
                   <TouchableOpacity
                     key={resource.id}
-                    style={[styles.resourceCard, { borderColor: accent + '33', backgroundColor: 'rgba(15,23,42,0.3)' }]}
+                    style={[
+                      styles.resourceCard,
+                      { borderColor: accent + '44', backgroundColor: '#E3F2FF' },
+                    ]}
                     onPress={() =>
                       router.push({ pathname: '/(tabs)/trilhas/recurso/[id]', params: { id: resource.id } })
                     }
                   >
-                    <View style={[styles.resourceBadge, { backgroundColor: accent + '22' }]}>
+                    <View style={[styles.resourceBadge, { backgroundColor: accent + '1A' }]}>
                       <Ionicons name="download-outline" size={14} color={accent} />
                       <Text style={[styles.resourceBadgeText, { color: accent }]}>Oficial</Text>
                     </View>
-                    <Text style={[styles.resourceTitle, { color: theme.text }]} numberOfLines={2}>
+                    <Text style={[styles.resourceTitle, { color: '#0F172A' }]} numberOfLines={2}>
                       {resource.title}
                     </Text>
                     {resource.description ? (
-                      <Text style={[styles.resourceDescription, { color: theme.textMuted }]} numberOfLines={2}>
+                      <Text style={[styles.resourceDescription, { color: '#334155' }]} numberOfLines={2}>
                         {resource.description}
                       </Text>
                     ) : null}
@@ -170,6 +153,7 @@ const styles = StyleSheet.create({
     gap: 14,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
+    borderWidth: 1,
   },
   heroHead: {
     flexDirection: 'row',
@@ -181,8 +165,8 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.2)',
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderColor: '#0F172A',
+    backgroundColor: 'rgba(255,255,255,0.92)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -216,6 +200,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
     flexWrap: 'wrap',
+    paddingHorizontal: 4,
   },
   sectionTag: {
     flexDirection: 'row',
@@ -225,13 +210,15 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
+    backgroundColor: '#E0F2FE',
+    borderColor: '#BFDBFE',
   },
   sectionTagText: { fontSize: 12, fontWeight: '800' },
   cardSurface: {
-    backgroundColor: 'rgba(15,23,42,0.35)',
+    backgroundColor: '#EAF2FF',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#C7D8FF',
     padding: 16,
     gap: 12,
   },
@@ -244,7 +231,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#BFDBFE',
+    backgroundColor: '#E3F2FF',
   },
   stepBadge: {
     width: 36,
@@ -253,30 +241,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#D4E9FF',
+    borderColor: '#93C5FD',
   },
   stepBadgeText: {
-    color: '#FFFFFF',
+    color: '#1D4ED8',
     fontSize: 14,
     fontWeight: '700',
   },
   stepTitle: {
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontSize: 15,
     fontWeight: '700',
   },
   stepSubtitle: {
-    color: 'rgba(255,255,255,0.8)',
+    color: '#334155',
     fontSize: 12,
   },
   stepAction: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(15,23,42,0.4)',
+    backgroundColor: '#2563EB',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1,
+    borderColor: '#93C5FD',
   },
   stepActionText: {
     color: '#FFFFFF',
@@ -288,6 +279,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     gap: 6,
+    backgroundColor: '#E3F2FF',
+    borderColor: '#BFDBFE',
   },
   resourceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   resourceCardInner: {
@@ -300,9 +293,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,
+    backgroundColor: '#D4E9FF',
   },
   resourceBadgeText: {
-    color: '#4F46E5',
+    color: '#1D4ED8',
     fontWeight: '700',
   },
   resourceTitle: {

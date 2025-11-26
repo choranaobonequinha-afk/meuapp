@@ -19,6 +19,8 @@ import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/authStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { LanguageSwitcher } from '../../components/LanguageSwitcher';
+import { useT } from '../../lib/i18n';
 
 const HERO_STATS = [
   { value: '120+', label: 'aulas guiadas' },
@@ -48,6 +50,7 @@ export default function SignUpScreen() {
   const insets = useSafeAreaInsets();
   const theme = useThemeColors();
   const { signUp } = useAuthStore.getState();
+  const t = useT();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -109,7 +112,7 @@ export default function SignUpScreen() {
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Criar conta</Text>
+          <Text style={styles.headerTitle}>{t('auth_signup_title') ?? 'Criar conta'}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -119,21 +122,24 @@ export default function SignUpScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }]}
           >
+            <View style={styles.langRow}>
+              <LanguageSwitcher />
+            </View>
             <View style={styles.formWrapper}>
               <View style={styles.cardOuter}>
                 <LinearGradient colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.72)']} style={styles.cardGradient}>
                   <View style={styles.cardContent}>
                     <View style={styles.cardHeader}>
-                      <Text style={styles.cardLabel}>Passo 1</Text>
-                      <Text style={styles.cardTitle}>Seus dados essenciais</Text>
+                      <Text style={styles.cardLabel}>{t('auth_signup_title') ?? 'Criar conta'}</Text>
+                      <Text style={styles.cardTitle}>{t('auth_signup_title') ?? 'Criar conta'}</Text>
                       <Text style={styles.cardDescription}>
-                        Informe os dados abaixo para montarmos seu perfil personalizado dentro do aplicativo.
+                        {t('auth_signup_subtitle') ?? 'Informe os dados para criar sua conta.'}
                       </Text>
                     </View>
 
                     <View style={styles.inputGroup}>
                       <Input
-                        label="Nome completo"
+                        label={t('auth_signup_name') ?? 'Nome completo'}
                         value={name}
                         onChangeText={(t) => {
                           setName(t);
@@ -144,7 +150,7 @@ export default function SignUpScreen() {
                         error={errors.name}
                       />
                       <Input
-                        label="Email"
+                        label={t('auth_signup_email') ?? 'Email'}
                         value={email}
                         onChangeText={(t) => {
                           setEmail(t);
@@ -157,7 +163,7 @@ export default function SignUpScreen() {
                         error={errors.email}
                       />
                       <Input
-                        label="Senha"
+                        label={t('auth_signup_password') ?? 'Senha'}
                         value={password}
                         onChangeText={(t) => {
                           setPassword(t);
@@ -177,16 +183,16 @@ export default function SignUpScreen() {
                       </Text>
                     </View>
 
-                    <Button title="Criar conta" onPress={handleSignUp} loading={loading} style={styles.signupButton} />
+                    <Button title={t('auth_signup_button') ?? 'Criar conta'} onPress={handleSignUp} loading={loading} style={styles.signupButton} />
 
                     <Text style={styles.termsText}>
-                      Ao continuar voce aceita nossos termos de uso e confirma que leu a politica de privacidade.
+                      {t('auth_signup_terms') ?? 'Ao continuar voce aceita nossos termos de uso e confirma que leu a politica de privacidade.'}
                     </Text>
 
                     <View style={styles.footer}>
-                      <Text style={styles.footerText}>Ja tem conta?</Text>
+                      <Text style={styles.footerText}>{t('auth_login_title') ?? 'Ja tem conta?'}</Text>
                       <Link href="/auth/login" style={styles.footerLink}>
-                        Entrar
+                        {t('auth_login_title') ?? 'Entrar'}
                       </Link>
                     </View>
                   </View>
@@ -274,6 +280,10 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 24,
     flexGrow: 1,
+    gap: 12,
+  },
+  langRow: {
+    alignItems: 'flex-end',
   },
   formWrapper: {
     flex: 1,

@@ -20,6 +20,8 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeColors } from '../../store/themeStore';
+import { LanguageSwitcher } from '../../components/LanguageSwitcher';
+import { useT } from '../../lib/i18n';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isWeb = Platform.OS === 'web';
@@ -46,6 +48,7 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const theme = useThemeColors();
+  const t = useT();
   const { signIn, resendConfirmationEmail } = useAuthStore.getState();
 
   const [email, setEmail] = useState('');
@@ -127,13 +130,16 @@ export default function LoginScreen() {
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 48 }]}
           >
+            <View style={styles.langRow}>
+              <LanguageSwitcher />
+            </View>
             <View style={styles.header}>
               <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                 <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
               </TouchableOpacity>
               <View style={styles.headerTextBlock}>
                 <Text style={styles.appName}>MeuApp</Text>
-                <Text style={styles.headerSubtitle}>Bem-vindo de volta!</Text>
+                <Text style={styles.headerSubtitle}>{t('auth_login_subtitle') ?? 'Bem-vindo de volta!'}</Text>
               </View>
             </View>
 
@@ -145,19 +151,19 @@ export default function LoginScreen() {
                   style={styles.heroImage}
                 />
               </View>
-              <Text style={styles.heroTitle}>Estude no seu ritmo</Text>
+              <Text style={styles.heroTitle}>{t('auth_login_title') ?? 'Fazer login'}</Text>
               <Text style={styles.heroDescription}>
-                Acesse aulas, trilhas e desafios em poucos segundos. Use um email valido, pois a confirmacao e enviada para sua caixa de entrada.
+                {t('auth_login_subtitle') ?? 'Entre com seus dados.'}
               </Text>
             </View>
             <View style={styles.card}>
               <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>Fazer login</Text>
-                <Text style={styles.cardSubtitle}>Entre com seus dados.</Text>
+                <Text style={styles.cardTitle}>{t('auth_login_title') ?? 'Fazer login'}</Text>
+                <Text style={styles.cardSubtitle}>{t('auth_login_subtitle') ?? 'Entre com seus dados.'}</Text>
               </View>
 
               <Input
-                label="Email"
+                label={t('auth_login_email') ?? 'Email'}
                 value={email}
                 autoCapitalize="none"
                 keyboardType="email-address"
@@ -173,7 +179,7 @@ export default function LoginScreen() {
               />
 
               <Input
-                label="Senha"
+                label={t('auth_login_password') ?? 'Senha'}
                 value={password}
                 placeholder="********"
                 secureTextEntry
@@ -188,7 +194,7 @@ export default function LoginScreen() {
               />
 
               <Button
-                title="Entrar com senha"
+                title={t('auth_login_button') ?? 'Entrar com senha'}
                 onPress={handlePasswordSignIn}
                 loading={loading}
               />
@@ -247,11 +253,11 @@ export default function LoginScreen() {
 
               <View style={styles.linksRow}>
                 <Link href="/auth/forgot-password" style={styles.linkText}>
-                  Esqueci minha senha
+                  {t('auth_login_forgot') ?? 'Esqueci minha senha'}
                 </Link>
                 <Text style={styles.dot}>|</Text>
                 <Link href="/auth/signup" style={styles.linkText}>
-                  Criar conta
+                  {t('auth_login_create') ?? 'Criar conta'}
                 </Link>
               </View>
             </View>
@@ -291,6 +297,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  langRow: {
+    alignItems: 'flex-end',
   },
   headerTextBlock: {
     flex: 1,

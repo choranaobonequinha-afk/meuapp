@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useThemeColors } from '../../store/themeStore';
+import { useT } from '../../lib/i18n';
 import { useQuizBank } from '../../hooks/useQuizBank';
 import { useStudyTracks } from '../../hooks/useStudyTracks';
 import { useProgress } from '../../hooks/useProgress';
@@ -35,6 +36,7 @@ export default function QuizScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const theme = useThemeColors();
+  const t = useT();
   const { width } = useWindowDimensions();
   const isWide = width > 760;
   const isTablet = width > 640;
@@ -49,16 +51,13 @@ export default function QuizScreen() {
   const lastScrollY = useRef(0);
   const contentHeightRef = useRef(0);
   const containerHeightRef = useRef(0);
-  const pendingFreezeRef = useRef(false);
-  const freezeOffsetRef = useRef(0);
+  const freezeYRef = useRef<number | null>(null);
+  const freezeGapRef = useRef(0);
   const hasQuestions = questions.length > 0;
   const [currentQuestion, setCurrentQuestion] = useState(randomQuestion || null);
   const [selected, setSelected] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
-  const [selectedExam, setSelectedExam] = useState<string>('ENEM');
-  const [resourceFilter, setResourceFilter] = useState<'all' | 'day1' | 'day2' | 'gaba'>('all');
-  const [colorFilter, setColorFilter] = useState<'none' | 'azul' | 'amarelo' | 'verde' | 'branco' | 'cinza'>('none');
-  const [yearQuery, setYearQuery] = useState('');
+  const selectedExam = 'ENEM';
 
   useEffect(() => {
     if (!currentQuestion && randomQuestion) {
@@ -138,36 +137,8 @@ export default function QuizScreen() {
 
   const examList = useMemo(() => Object.keys(examResources), [examResources]);
 
-  useEffect(() => {
-    if (!examResources[selectedExam] && examList.length > 0) {
-      setSelectedExam(examList.includes('ENEM') ? 'ENEM' : examList[0]);
-    }
-  }, [examList, examResources, selectedExam]);
-
   const activeResources = examResources[selectedExam] || [];
-  const filteredResources = useMemo(() => {
-    const q = yearQuery.trim().toLowerCase();
-    return activeResources.filter((item) => {
-      const title = (item.title || '').toLowerCase();
-      const isGabarito = title.includes('gabarito');
-      const isDay1 = /1\s*(º|o)?\s*dia/i.test(title);
-      const isDay2 = /2\s*(º|o)?\s*dia/i.test(title);
-      const matchesColor =
-        colorFilter === 'none' ||
-        title.includes(colorFilter) ||
-        (colorFilter === 'branco' && title.includes('branca'));
-      const matchesFilter =
-        resourceFilter === 'all' ||
-        (resourceFilter === 'gaba' && isGabarito) ||
-        (resourceFilter === 'day1' && isDay1) ||
-        (resourceFilter === 'day2' && isDay2);
-      const matchesQuery = q.length === 0 || title.includes(q);
-      return matchesFilter && matchesQuery && matchesColor;
-    });
-  }, [activeResources, resourceFilter, colorFilter, yearQuery]);
-  const filtersActive =
-    resourceFilter !== 'all' || colorFilter !== 'none' || yearQuery.trim().length > 0;
-  const displayResources = filtersActive ? filteredResources : activeResources;
+  const displayResources = activeResources;
 
   const handleOpenResources = (exam?: string, shouldScroll?: boolean) => {
     if (exam) setSelectedExam(exam);
@@ -184,9 +155,23 @@ export default function QuizScreen() {
 
   const freezeToResources = () => {
     const currentY = lastScrollY.current ?? 0;
-    const sectionTop = resourcesOffset.current ?? 0;
-    freezeOffsetRef.current = Math.max(currentY - sectionTop, 0);
-    pendingFreezeRef.current = true;
+    const containerH = containerHeightRef.current || 0;
+    const maxY = Math.max(contentHeightRef.current - containerH, 0);
+    freezeGapRef.current = Math.max(maxY - currentY, 0);
+    freezeYRef.current = currentY;
+  };
+
+  const restoreIfPending = () => {
+    if (freezeYRef.current == null) return;
+    const containerH = containerHeightRef.current || 0;
+    const maxY = Math.max(contentHeightRef.current - containerH, 0);
+    const target = Math.max(0, maxY - freezeGapRef.current);
+    freezeYRef.current = null;
+    freezeGapRef.current = 0;
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: target, animated: false });
+      lastScrollY.current = target;
+    });
   };
   
 
@@ -223,6 +208,9 @@ export default function QuizScreen() {
     ],
     [questions.length, exams.length, resources.length]
   );
+  useLayoutEffect(() => {
+    restoreIfPending();
+  }, [, , , selectedExam, displayResources.length]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -248,17 +236,7 @@ export default function QuizScreen() {
           }}
           onContentSizeChange={(_w, h) => {
             contentHeightRef.current = h;
-            if (pendingFreezeRef.current) {
-              const sectionTop = resourcesOffset.current ?? 0;
-              const containerH = containerHeightRef.current || 0;
-              const maxY = Math.max(h - containerH, 0);
-              const target = Math.min(sectionTop + freezeOffsetRef.current, maxY);
-              pendingFreezeRef.current = false;
-              requestAnimationFrame(() => {
-                scrollRef.current?.scrollTo({ y: target, animated: false });
-                lastScrollY.current = target;
-              });
-            }
+            restoreIfPending();
           }}
           onScroll={(event) => {
             rememberScroll(event.nativeEvent.contentOffset.y);
@@ -499,100 +477,33 @@ export default function QuizScreen() {
                 </View>
               </View>
 
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.examChips}>
-                {examList.map((examKey) => (
-                  <TouchableOpacity
-                    key={examKey}
-                    style={[
-                      styles.examChip,
-                      selectedExam === examKey && { backgroundColor: 'rgba(255,255,255,0.18)', borderColor: '#FFFFFF' },
-                    ]}
-                    onPress={() => handleOpenResources(examKey)}
-                  >
-                    <Text style={styles.examChipText}>{examKey}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <View style={styles.filterSurface}>
-                <View style={[styles.filterRow, !isTablet && styles.filterRowStacked]}>
-                  <View style={styles.searchBox}>
-                    <Ionicons name="search" size={16} color="rgba(255,255,255,0.7)" />
-                    <TextInput
-                      placeholder="Filtrar por ano ou caderno"
-                      placeholderTextColor="rgba(255,255,255,0.55)"
-                      value={yearQuery}
-                      onChangeText={setYearQuery}
-                      style={styles.searchInput}
-                    />
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.clearBtn, !filtersActive && styles.btnDisabled]}
-                    onPress={() => {
-                      freezeToResources();
-                      setYearQuery('');
-                      setColorFilter('none');
-                      setResourceFilter('all');
-                    }}
-                    disabled={!filtersActive}
-                    activeOpacity={0.85}
-                  >
-                    <Ionicons name="close-circle" size={14} color="#0B1224" />
-                    <Text style={styles.clearBtnText}>Limpar filtros</Text>
-                  </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.enemCta}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(tabs)/quiz/[year]',
+                    params: { year: '2025', exam: 'ENEM' },
+                  })
+                }
+                activeOpacity={0.88}
+              >
+                <View style={styles.enemCtaIcon}>
+                  <Ionicons name="ribbon-outline" size={18} color="#0B1224" />
                 </View>
-                <View style={[styles.filterChips, styles.filterWrap]}>
-                    {(
-                      [
-                        { id: 'day1', label: 'Dia 1' },
-                        { id: 'day2', label: 'Dia 2' },
-                        { id: 'gaba', label: 'Gabarito' },
-                      ] as const
-                    ).map((opt) => {
-                      const isActive = resourceFilter === opt.id;
-                      return (
-                        <TouchableOpacity
-                          key={opt.id}
-                          style={[styles.filterChip, isActive && styles.filterChipActive]}
-                          onPress={() => {
-                            freezeToResources();
-                            setResourceFilter(isActive ? 'all' : opt.id);
-                          }}
-                        >
-                          <Text style={styles.filterChipText}>{opt.label}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.enemCtaTitle}>{t('quiz_cta_enem') ?? 'ENEM 2025'}</Text>
+                  <Text style={styles.enemCtaSubtitle}>{t('quiz_cta_subtitle') ?? 'Provas e gabaritos oficiais'}</Text>
                 </View>
-                <View style={[styles.filterChips, styles.filterWrap]}>
-                  {COLOR_OPTIONS.map((opt) => {
-                    const isActive = colorFilter === opt.id;
-                    const bg = isActive ? `${opt.color}33` : 'rgba(255,255,255,0.08)';
-                    const border = isActive ? opt.color : 'rgba(255,255,255,0.2)';
-                    const textColor = isActive ? opt.text || '#FFFFFF' : '#FFFFFF';
-                    return (
-                      <TouchableOpacity
-                        key={opt.id}
-                        style={[styles.filterChip, { backgroundColor: bg, borderColor: border }]}
-                        onPress={() => {
-                          freezeToResources();
-                          setColorFilter(isActive ? 'none' : opt.id);
-                        }}
-                      >
-                        <Text style={[styles.filterChipText, { color: textColor }]}>{opt.label}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
+                <Ionicons name="arrow-forward" size={18} color="#0B1224" />
+              </TouchableOpacity>
 
               {activeResources.length === 0 ? (
                 <Text style={styles.emptyText}>
                   Adicione recursos (kind = resource) no Supabase para o exame {selectedExam}.
                 </Text>
-              ) : displayResources.length === 0 && filtersActive ? (
+              ) : displayResources.length === 0 ? (
                 <Text style={styles.emptyText}>
-                  Nenhum PDF bate com os filtros atuais. Limpe os filtros para ver tudo.
+                  Nenhum PDF encontrado para este exame.
                 </Text>
               ) : yearsAvailable.length === 0 ? (
                 <Text style={styles.emptyText}>
@@ -1197,6 +1108,26 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
   },
+  enemCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  enemCtaIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#E0E7FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  enemCtaTitle: { color: '#0B1224', fontSize: 16, fontWeight: '800' },
+  enemCtaSubtitle: { color: '#475569', fontSize: 12 },
   yearSubtitle: {
     color: 'rgba(255,255,255,0.8)',
     fontSize: 12,
