@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { useThemeColors } from '../../store/themeStore';
 import { useQuizBank } from '../../hooks/useQuizBank';
 import { useStudyTracks } from '../../hooks/useStudyTracks';
+import { useProgress } from '../../hooks/useProgress';
 
 type ResourceItem = ReturnType<typeof useStudyTracks>['resources'][number] & {
   trackExam?: string;
@@ -40,10 +41,13 @@ export default function QuizScreen() {
   const bottomSpace = insets.bottom + 140;
   const accentColors = ['#22D3EE', '#F97316', '#34D399', '#60A5FA', '#F472B6', '#A3E635'];
   const examCardWidth = isTablet ? 180 : 160;
-  const { questions, loading, error, exams, subjects, randomQuestion } = useQuizBank();
+  const { questions, loading, error, exams, subjects: quizSubjects, randomQuestion } = useQuizBank();
   const { resources } = useStudyTracks();
+  const { subjects: progressSubjects } = useProgress();
   const scrollRef = useRef<ScrollView>(null);
   const resourcesOffset = useRef(0);
+  const lastScrollY = useRef(0);
+  const freezeScrollTo = useRef<number | null>(null);
   const hasQuestions = questions.length > 0;
   const [currentQuestion, setCurrentQuestion] = useState(randomQuestion || null);
   const [selected, setSelected] = useState<number | null>(null);
@@ -79,17 +83,29 @@ export default function QuizScreen() {
     [categories]
   );
 
-  const subjectStats = useMemo(
-    () =>
-      subjects.map((item) => ({
-        id: item.subject,
-        title: item.subject.toUpperCase(),
-        accuracy: 70 + Math.round(Math.random() * 20),
-        completed: Math.round(item.count * 0.4),
-        total: item.count,
-      })),
-    [subjects]
-  );
+  const subjectStats = useMemo(() => {
+    if (progressSubjects.length > 0) {
+      return progressSubjects.map((item, idx) => ({
+        id: item.subject_slug || item.subject_id || `progress-${idx}`,
+        title: item.subject_name.toUpperCase(),
+        accuracy: Math.min(100, Math.max(0, item.percent ?? 0)),
+        completed: item.completed_lessons || 0,
+        total: item.total_lessons || 0,
+        color: item.color_hex || accentColors[idx % accentColors.length],
+        source: 'progress' as const,
+      }));
+    }
+
+    return quizSubjects.map((item, idx) => ({
+      id: item.subject,
+      title: item.subject.toUpperCase(),
+      accuracy: 70 + Math.round(Math.random() * 20),
+      completed: Math.round(item.count * 0.4),
+      total: item.count,
+      color: accentColors[idx % accentColors.length],
+      source: 'quiz' as const,
+    }));
+  }, [progressSubjects, quizSubjects, accentColors]);
 
   const handleShuffle = () => {
     if (questions.length === 0) return;
@@ -105,14 +121,6 @@ export default function QuizScreen() {
   const handleSelect = (index: number) => {
     setSelected(index);
     setRevealed(true);
-  };
-
-  const handleOpenResources = () => {
-    requestAnimationFrame(() => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTo({ y: Math.max(resourcesOffset.current - 12, 0), animated: true });
-      }
-    });
   };
 
   const examResources = useMemo(() => {
@@ -157,6 +165,25 @@ export default function QuizScreen() {
   const filtersActive =
     resourceFilter !== 'all' || colorFilter !== 'none' || yearQuery.trim().length > 0;
   const displayResources = filtersActive ? filteredResources : activeResources;
+
+  const handleOpenResources = (exam?: string, shouldScroll?: boolean) => {
+    if (exam) setSelectedExam(exam);
+    if (!shouldScroll) return;
+    const targetY = Math.max(resourcesOffset.current - 12, 0);
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: targetY, animated: true });
+    });
+  };
+
+  // Restaura a posição ao alterar filtros/chips
+  useEffect(() => {
+    if (freezeScrollTo.current == null) return;
+    const y = freezeScrollTo.current;
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y, animated: false });
+      freezeScrollTo.current = null;
+    });
+  }, [resourceFilter, colorFilter, yearQuery, selectedExam]);
 
   const yearsAvailable = useMemo(() => {
     const set = new Set<string>();
@@ -210,6 +237,9 @@ export default function QuizScreen() {
             alignItems: 'center',
           }}
           showsVerticalScrollIndicator={false}
+          onScroll={(event) => {
+            lastScrollY.current = event.nativeEvent.contentOffset.y;
+          }}
         >
           <View style={styles.maxWidth}>
             <View style={styles.heroCard}>
@@ -236,7 +266,7 @@ export default function QuizScreen() {
                       if (examList.length > 0) {
                         setSelectedExam(examList.includes('ENEM') ? 'ENEM' : examList[0]);
                       }
-                      handleOpenResources();
+                      handleOpenResources(undefined, true);
                     }}
                     disabled={examList.length === 0}
                     activeOpacity={0.85}
@@ -349,15 +379,29 @@ export default function QuizScreen() {
                       <View style={{ flex: 1, gap: 6 }}>
                         <Text style={styles.subjectName}>{subject.title}</Text>
                         <Text style={styles.subjectInfo}>
-                          {subject.completed}/{subject.total} questoes resolvidas
+                          {subject.source === 'progress'
+                            ? `${subject.completed}/${subject.total || 0} aulas concluidas`
+                            : `${subject.completed}/${subject.total} questoes resolvidas`}
                         </Text>
                         <View style={styles.progressTrack}>
-                          <View style={[styles.progressFill, { width: `${Math.min(subject.accuracy, 100)}%` }]} />
+                          <View
+                            style={[
+                              styles.progressFill,
+                              {
+                                width: `${Math.min(subject.accuracy, 100)}%`,
+                                backgroundColor: subject.color || '#60A5FA',
+                              },
+                            ]}
+                          />
                         </View>
                       </View>
                       <View style={styles.subjectAccuracy}>
-                        <Text style={styles.subjectAccuracyScore}>{subject.accuracy}%</Text>
-                        <Text style={styles.subjectAccuracyLabel}>Precisao</Text>
+                        <Text style={styles.subjectAccuracyScore}>
+                          {Math.round(Math.min(100, Math.max(0, subject.accuracy)))}%
+                        </Text>
+                        <Text style={styles.subjectAccuracyLabel}>
+                          {subject.source === 'progress' ? 'Progresso' : 'Precisao'}
+                        </Text>
                       </View>
                     </View>
                   ))}
@@ -393,7 +437,7 @@ export default function QuizScreen() {
                           styles.examCard,
                           { width: examCardWidth, borderColor: `${color}33`, backgroundColor: 'rgba(255,255,255,0.08)' },
                         ]}
-                        onPress={() => setSelectedExam(cat.title)}
+                        onPress={() => handleOpenResources(cat.title, true)}
                       >
                         <View style={[styles.examIcon, { backgroundColor: `${color}1A` }]}>
                           <Ionicons name="ribbon-outline" size={18} color={color} />
@@ -438,7 +482,7 @@ export default function QuizScreen() {
                       styles.examChip,
                       selectedExam === examKey && { backgroundColor: 'rgba(255,255,255,0.18)', borderColor: '#FFFFFF' },
                     ]}
-                    onPress={() => setSelectedExam(examKey)}
+                    onPress={() => handleOpenResources(examKey)}
                   >
                     <Text style={styles.examChipText}>{examKey}</Text>
                   </TouchableOpacity>
@@ -460,6 +504,7 @@ export default function QuizScreen() {
                   <TouchableOpacity
                     style={[styles.clearBtn, !filtersActive && styles.btnDisabled]}
                     onPress={() => {
+                      freezeScrollTo.current = lastScrollY.current;
                       setYearQuery('');
                       setColorFilter('none');
                       setResourceFilter('all');
@@ -472,24 +517,27 @@ export default function QuizScreen() {
                   </TouchableOpacity>
                 </View>
                 <View style={[styles.filterChips, styles.filterWrap]}>
-                  {(
-                    [
-                      { id: 'day1', label: 'Dia 1' },
-                      { id: 'day2', label: 'Dia 2' },
-                      { id: 'gaba', label: 'Gabarito' },
-                    ] as const
-                  ).map((opt) => {
-                    const isActive = resourceFilter === opt.id;
-                    return (
-                      <TouchableOpacity
-                        key={opt.id}
-                        style={[styles.filterChip, isActive && styles.filterChipActive]}
-                        onPress={() => setResourceFilter(isActive ? 'all' : opt.id)}
-                      >
-                        <Text style={styles.filterChipText}>{opt.label}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                    {(
+                      [
+                        { id: 'day1', label: 'Dia 1' },
+                        { id: 'day2', label: 'Dia 2' },
+                        { id: 'gaba', label: 'Gabarito' },
+                      ] as const
+                    ).map((opt) => {
+                      const isActive = resourceFilter === opt.id;
+                      return (
+                        <TouchableOpacity
+                          key={opt.id}
+                          style={[styles.filterChip, isActive && styles.filterChipActive]}
+                          onPress={() => {
+                            freezeScrollTo.current = lastScrollY.current;
+                            setResourceFilter(isActive ? 'all' : opt.id);
+                          }}
+                        >
+                          <Text style={styles.filterChipText}>{opt.label}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                 </View>
                 <View style={[styles.filterChips, styles.filterWrap]}>
                   {COLOR_OPTIONS.map((opt) => {
@@ -501,7 +549,10 @@ export default function QuizScreen() {
                       <TouchableOpacity
                         key={opt.id}
                         style={[styles.filterChip, { backgroundColor: bg, borderColor: border }]}
-                        onPress={() => setColorFilter(isActive ? 'none' : opt.id)}
+                        onPress={() => {
+                          freezeScrollTo.current = lastScrollY.current;
+                          setColorFilter(isActive ? 'none' : opt.id);
+                        }}
                       >
                         <Text style={[styles.filterChipText, { color: textColor }]}>{opt.label}</Text>
                       </TouchableOpacity>

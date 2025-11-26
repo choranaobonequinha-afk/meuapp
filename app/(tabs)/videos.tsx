@@ -38,6 +38,7 @@ export default function VideosScreen() {
     error,
     refresh,
     toggleLessonCompletion,
+    togglingLessonId,
   } = useLessons();
   const [selectedSubject, setSelectedSubject] = useState('todos');
   const scrollRef = useRef<ScrollView | null>(null);
@@ -268,12 +269,17 @@ export default function VideosScreen() {
                             styles.tagButton,
                             lesson.progress?.status === 'done' && { backgroundColor: 'rgba(16,185,129,0.25)' },
                           ]}
+                          disabled={loading || togglingLessonId === lesson.id}
                         >
-                          <Ionicons
-                            name={lesson.progress?.status === 'done' ? 'refresh' : 'bookmark-outline'}
-                            size={14}
-                            color="#FFFFFF"
-                          />
+                          {togglingLessonId === lesson.id ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                          ) : (
+                            <Ionicons
+                              name={lesson.progress?.status === 'done' ? 'refresh' : 'bookmark-outline'}
+                              size={14}
+                              color="#FFFFFF"
+                            />
+                          )}
                           <Text style={styles.tagButtonText}>
                             {lesson.progress?.status === 'done' ? 'Desfazer' : 'Marcar feito'}
                           </Text>
@@ -341,12 +347,17 @@ export default function VideosScreen() {
                             lesson.progress?.status === 'done' && { backgroundColor: 'rgba(16,185,129,0.4)' },
                           ]}
                           onPress={() => toggleLessonCompletion(lesson.id)}
+                          disabled={loading || togglingLessonId === lesson.id}
                         >
-                          <Ionicons
-                            name={lesson.progress?.status === 'done' ? 'arrow-undo' : 'checkbox-outline'}
-                            size={16}
-                            color="#FFFFFF"
-                          />
+                          {togglingLessonId === lesson.id ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                          ) : (
+                            <Ionicons
+                              name={lesson.progress?.status === 'done' ? 'arrow-undo' : 'checkbox-outline'}
+                              size={16}
+                              color="#FFFFFF"
+                            />
+                          )}
                           <Text style={styles.actionButtonText}>
                             {lesson.progress?.status === 'done' ? 'Desfazer' : 'Concluir'}
                           </Text>

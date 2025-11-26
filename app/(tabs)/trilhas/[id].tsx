@@ -14,6 +14,13 @@ export default function TrilhaDetalhe() {
   const { trackMap, loading, error } = useStudyTracks();
   const trilha = id ? trackMap.get(id) : undefined;
   const accent = trilha?.color_hex || '#4F46E5';
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/trilha');
+    }
+  };
 
   const lessons = useMemo(
     () => trilha?.items.filter((item) => item.kind === 'lesson') ?? [],
@@ -55,7 +62,7 @@ export default function TrilhaDetalhe() {
             end={{ x: 1, y: 1 }}
           >
             <View style={styles.heroHead}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <TouchableOpacity onPress={handleBack} style={styles.backButton}>
                 <Ionicons name="chevron-back" size={18} color="#0B1224" />
               </TouchableOpacity>
               <Text style={styles.heroTitle}>{trilha.title}</Text>

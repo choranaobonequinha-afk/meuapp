@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import type {
@@ -53,6 +54,7 @@ type LessonProgressRow = LessonProgress & {
 export function useProgress() {
   const user = useAuthStore((state) => state.user);
   const [state, setState] = useState<ProgressState>(initialState);
+  const syncTimer = useRef<NodeJS.Timeout | null>(null);
 
   const fetchData = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -246,6 +248,18 @@ export function useProgress() {
       supabase.removeChannel(channel);
     };
   }, [user?.id, fetchData]);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('lesson-progress-sync', () => {
+      fetchData({ silent: true });
+      if (syncTimer.current) clearTimeout(syncTimer.current);
+      syncTimer.current = setTimeout(() => fetchData({ silent: true }), 450);
+    });
+    return () => {
+      sub.remove();
+      if (syncTimer.current) clearTimeout(syncTimer.current);
+    };
+  }, [fetchData]);
 
   const refresh = useCallback(() => fetchData({ silent: true }), [fetchData]);
 

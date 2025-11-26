@@ -19,6 +19,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const {
     loading: progressLoading,
+    refreshing: progressRefreshing,
     subjects: subjectProgress,
     activities,
     overview,
@@ -66,6 +67,7 @@ export default function DashboardScreen() {
   const overallPercent = Math.min(100, Math.max(0, overview.overallPercent || 0));
   const hasSubjects = subjectProgress.length > 0;
   const hasActivities = activities.length > 0;
+  const progressBusy = progressLoading || progressRefreshing;
   const quickActions = useMemo(
     () => [
       {
@@ -152,22 +154,28 @@ export default function DashboardScreen() {
               <TouchableOpacity
                 style={styles.sectionAction}
                 onPress={refresh}
-                disabled={progressLoading}
+                disabled={progressBusy}
                 activeOpacity={0.85}
               >
                 <Ionicons
-                  name={progressLoading ? 'time-outline' : 'refresh-outline'}
+                  name={progressBusy ? 'time-outline' : 'refresh-outline'}
                   size={16}
                   color="white"
                 />
                 <Text style={styles.sectionActionText}>
-                  {progressLoading ? 'Atualizando' : 'Atualizar'}
+                  {progressBusy ? 'Atualizando' : 'Atualizar'}
                 </Text>
               </TouchableOpacity>
             </View>
             <View style={styles.progressCard}>
               {progressError ? (
                 <Text style={styles.progressError}>{progressError}</Text>
+              ) : null}
+              {progressRefreshing && !progressLoading ? (
+                <View style={styles.progressRefreshing}>
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                  <Text style={styles.progressLoadingText}>Atualizando...</Text>
+                </View>
               ) : null}
               {progressLoading ? (
                 <View style={styles.progressLoading}>
@@ -211,7 +219,7 @@ export default function DashboardScreen() {
           <View style={styles.subjectsSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Suas materias</Text>
-              {progressLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : null}
+              {progressLoading || progressRefreshing ? <ActivityIndicator size="small" color="#FFFFFF" /> : null}
             </View>
             {hasSubjects ? (
               <View style={styles.subjectsGrid}>
@@ -266,7 +274,7 @@ export default function DashboardScreen() {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Atividades recentes</Text>
             </View>
-            {progressLoading ? (
+            {progressLoading && !progressRefreshing ? (
               <View style={styles.progressLoading}>
                 <ActivityIndicator color="#FFFFFF" />
               </View>
@@ -496,6 +504,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(248,113,113,0.2)',
     color: '#FEE2E2',
     fontSize: 13,
+  },
+  progressRefreshing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
   },
   progressLoading: {
     alignItems: 'center',

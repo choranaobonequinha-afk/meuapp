@@ -83,7 +83,11 @@ export default function QuizYearScreen() {
   }, [filtered]);
 
   const goBack = () => {
-    router.replace('/(tabs)/quiz');
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/quiz');
+    }
   };
 
   const prettyDay = (label: string) => label.replace('��', '\u00ba');

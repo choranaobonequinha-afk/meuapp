@@ -34,6 +34,13 @@ export default function SubjectScreen() {
   }, [params.id, params.name, params.color]);
 
   const subjectId = (params.id || '').toString().toLowerCase();
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -45,7 +52,7 @@ export default function SubjectScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.header}
         >
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
           <View style={styles.headerTitleWrap}>
