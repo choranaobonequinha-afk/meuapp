@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
@@ -14,7 +13,6 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, useRouter } from 'expo-router';
-import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -22,7 +20,6 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeColors } from '../../store/themeStore';
-import { useGoogleSignIn } from '../../hooks/useGoogleSignIn';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isWeb = Platform.OS === 'web';
@@ -51,16 +48,6 @@ export default function LoginScreen() {
   const theme = useThemeColors();
   const { signIn, resendConfirmationEmail } = useAuthStore.getState();
 
-  const googleConfigured = useMemo(() => {
-    const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, unknown>;
-    return Boolean(
-      extra?.googleClientId ||
-        extra?.googleOAuthEnabled ||
-        process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID ||
-        process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_SECRET
-    );
-  }, []);
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -70,18 +57,6 @@ export default function LoginScreen() {
     type: 'info' | 'success' | 'error';
     message: string;
   } | null>(null);
-  const { isReady: googleReady, loading: oauthLoading, error: googleError, signInWithGoogle } = useGoogleSignIn();
-  const googleAvailable = googleConfigured && googleReady;
-
-  useEffect(() => {
-    if (googleError) {
-      Alert.alert('Login com Google', googleError);
-      setFeedback({
-        type: 'error',
-        message: googleError,
-      });
-    }
-  }, [googleError]);
 
   const validateEmail = (value: string) => {
     if (!value.trim()) return 'Informe seu email';
@@ -178,7 +153,7 @@ export default function LoginScreen() {
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>Fazer login</Text>
-                <Text style={styles.cardSubtitle}>Entre com seus dados ou utilize o Google.</Text>
+                <Text style={styles.cardSubtitle}>Entre com seus dados.</Text>
               </View>
 
               <Input
@@ -279,27 +254,6 @@ export default function LoginScreen() {
                   Criar conta
                 </Link>
               </View>
-
-              {googleAvailable ? (
-                <View style={styles.oauthBlock}>
-                  <Text style={styles.oauthLabel}>Ou continue com</Text>
-                  <TouchableOpacity
-                    style={[styles.googleButton, oauthLoading && styles.googleButtonDisabled]}
-                    onPress={signInWithGoogle}
-                    disabled={oauthLoading || !googleAvailable}
-                    activeOpacity={0.85}
-                  >
-                    {oauthLoading ? (
-                      <ActivityIndicator size="small" color="#111827" />
-                    ) : (
-                      <Ionicons name="logo-google" size={20} color="#111827" />
-                    )}
-                    <Text style={styles.googleButtonText}>
-                      {oauthLoading ? 'Conectando...' : 'Entrar com Google'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : null}
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -418,15 +372,6 @@ const styles = StyleSheet.create({
   dot: {
     color: '#D1D5DB',
   },
-  oauthBlock: {
-    marginTop: 12,
-    gap: 12,
-  },
-  oauthLabel: {
-    textAlign: 'center',
-    color: '#6B7280',
-    fontSize: 14,
-  },
   notice: {
     marginTop: 8,
     fontSize: 13,
@@ -456,24 +401,5 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: '#1E3A8A',
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  googleButtonDisabled: {
-    opacity: 0.6,
-  },
-  googleButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
   },
 });

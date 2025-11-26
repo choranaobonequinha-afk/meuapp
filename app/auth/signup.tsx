@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  ActivityIndicator,
   ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,8 +19,6 @@ import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/authStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
-import { useGoogleSignIn } from '../../hooks/useGoogleSignIn';
 
 const HERO_STATS = [
   { value: '120+', label: 'aulas guiadas' },
@@ -57,25 +54,6 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
-
-  const googleConfigured = useMemo(() => {
-    const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, unknown>;
-    return Boolean(
-      extra?.googleClientId ||
-      extra?.googleOAuthEnabled ||
-      process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID ||
-      process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_SECRET
-    );
-  }, []);
-
-  const { isReady: googleReady, loading: oauthLoading, error: googleError, signInWithGoogle } = useGoogleSignIn();
-  const googleAvailable = googleConfigured && googleReady;
-
-  useEffect(() => {
-    if (googleError) {
-      Alert.alert('Entrar com Google', googleError);
-    }
-  }, [googleError]);
 
   const handleBack = () => {
     const routerAny = router as unknown as { canGoBack?: () => boolean };
@@ -204,30 +182,6 @@ export default function SignUpScreen() {
                     <Text style={styles.termsText}>
                       Ao continuar voce aceita nossos termos de uso e confirma que leu a politica de privacidade.
                     </Text>
-
-                    <View style={styles.divider}>
-                      <View style={styles.dividerLine} />
-                      <Text style={styles.dividerText}>ou continue com</Text>
-                      <View style={styles.dividerLine} />
-                    </View>
-
-                    {googleAvailable ? (
-                      <TouchableOpacity
-                        style={[styles.googleButton, oauthLoading && styles.googleButtonDisabled]}
-                        activeOpacity={0.85}
-                        onPress={signInWithGoogle}
-                        disabled={oauthLoading || !googleAvailable}
-                      >
-                        {oauthLoading ? (
-                          <ActivityIndicator size="small" color="#111827" />
-                        ) : (
-                          <Ionicons name="logo-google" size={20} color="#111827" />
-                        )}
-                        <Text style={styles.googleButtonText}>
-                          {oauthLoading ? 'Conectando...' : 'Criar conta com Google'}
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
 
                     <View style={styles.footer}>
                       <Text style={styles.footerText}>Ja tem conta?</Text>
@@ -485,39 +439,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     lineHeight: 18,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
-    fontSize: 13,
-    color: '#6B7280',
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
-  },
-  googleButtonDisabled: {
-    opacity: 0.7,
-  },
-  googleButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
   },
   footer: {
     flexDirection: 'row',
